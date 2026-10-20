@@ -17,7 +17,7 @@ Usage:
     python earmark.py --script        # Interactive Python console
 """
 
-from flask import Flask, render_template_string, request, jsonify, send_file, Response
+from flask import Flask, render_template_string, request, jsonify, send_file, Response, send_from_directory
 import sqlite3
 import json
 import os
@@ -45,6 +45,14 @@ except Exception:
     np = None
 
 app = Flask(__name__)
+
+# Interface assets (Quadro stylesheet and fonts) live in the ui/ folder: next to
+# this file when run from source, inside the unpacked bundle in a built app.
+UI_DIR = os.path.join(getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__))), 'ui')
+
+@app.route('/ui/<path:filename>')
+def ui_asset(filename):
+    return send_from_directory(UI_DIR, filename)
 
 # Database setup
 # Databases live in ~/Documents/Earmark/ so Earmark works however it is
@@ -564,8 +572,8 @@ HTML_TEMPLATE = '''
         .btn:hover { background: var(--accent-hover); }
         .btn-secondary { background: var(--bg-input); color: var(--text-primary); }
         .btn-secondary:hover { background: var(--bg-item-hover); }
-        .btn-danger { background: #ef4444; }
-        .btn-danger:hover { background: #dc2626; }
+        .btn-danger { background: var(--rosso); }
+        .btn-danger:hover { background: var(--rosso); }
         .btn-small { padding: 4px 8px; font-size: 11px; }
         
         .main {
@@ -611,7 +619,7 @@ HTML_TEMPLATE = '''
         
         .file-item.active {
             background: var(--bg-item-active);
-            border-left: 4px solid #60a5fa;
+            border-left: 4px solid var(--ardesia);
         }
         
         .file-item.selected {
@@ -619,12 +627,12 @@ HTML_TEMPLATE = '''
         }
         
         .file-item.focused {
-            outline: 2px solid #60a5fa;
+            outline: 2px solid var(--ardesia);
             outline-offset: -2px;
         }
         
         .file-name { font-weight: 500; margin-bottom: 4px; }
-        .file-tags { font-size: 12px; color: #cbd5e1; }
+        .file-tags { font-size: 12px; color: var(--inchiostro); }
         .file-duration {
             margin-left: 8px;
             flex-shrink: 0;
@@ -719,7 +727,7 @@ HTML_TEMPLATE = '''
             display: block;
             font-size: 12px;
             font-weight: 600;
-            color: #94a3b8;
+            color: var(--grafite);
             margin-bottom: 4px;
             text-transform: uppercase;
         }
@@ -747,7 +755,7 @@ HTML_TEMPLATE = '''
         .form-group.inactive input,
         .form-group.inactive select,
         .form-group.inactive textarea {
-            background: #3d4a5c;
+            background: var(--intonaco);
         }
         
         input[type="range"] {
@@ -756,14 +764,14 @@ HTML_TEMPLATE = '''
         
         .value-display {
             font-size: 12px;
-            color: #cbd5e1;
+            color: var(--inchiostro);
             margin-top: 4px;
         }
         
         .empty-state {
             text-align: center;
             padding: 40px;
-            color: #64748b;
+            color: var(--grafite);
         }
         
         .tag-input-group {
@@ -783,7 +791,7 @@ HTML_TEMPLATE = '''
         }
         
         .play-btn {
-            background: #3b82f6;
+            background: var(--grigioverde);
             border: none;
             color: white;
             width: 32px;
@@ -797,7 +805,7 @@ HTML_TEMPLATE = '''
             flex-shrink: 0;
         }
         
-        .play-btn:hover { background: #2563eb; }
+        .play-btn:hover { background: var(--grigioverde-scuro); }
         
         /* Audio Player Bar - Inline in center panel */
         .player-bar-inline {
@@ -863,7 +871,7 @@ HTML_TEMPLATE = '''
         .player-progress-container {
             flex: 1;
             height: 40px;
-            background: #334155;
+            background: var(--calce);
             border-radius: 4px;
             position: relative;
             cursor: grab;
@@ -884,7 +892,6 @@ HTML_TEMPLATE = '''
             height: 100%;
             background: rgba(59, 130, 246, 0.3);
             width: 0%;
-            transition: width 0.1s linear;
             z-index: 2;
             position: relative;
         }
@@ -898,7 +905,7 @@ HTML_TEMPLATE = '''
             top: 0;
             bottom: 0;
             width: 2px;
-            background: #fff;
+            background: var(--calce);
             left: 0%;
             pointer-events: none;
             z-index: 5;
@@ -919,7 +926,7 @@ HTML_TEMPLATE = '''
             top: 0;
             bottom: 0;
             background: rgba(251, 191, 36, 0.4);
-            border-left: 2px solid #fbbf24;
+            border-left: 2px solid var(--ocra);
             cursor: pointer;
             /* Markers don't capture the pointer: plain-drag pans straight over them,
                and edge-dragging is handled by the container's Option-click handler. */
@@ -935,13 +942,13 @@ HTML_TEMPLATE = '''
             top: 2px;
             left: 4px;
             font-size: 9px;
-            color: #fbbf24;
+            color: var(--warn);
             white-space: nowrap;
             text-shadow: 0 0 2px #000;
         }
         
         .player-btn {
-            background: #3b82f6;
+            background: var(--grigioverde);
             border: none;
             color: white;
             width: 32px;
@@ -955,10 +962,10 @@ HTML_TEMPLATE = '''
             flex-shrink: 0;
         }
         
-        .player-btn:hover { background: #2563eb; }
+        .player-btn:hover { background: var(--grigioverde-scuro); }
         
         .marker-quick-btn-inline {
-            background: #f59e0b;
+            background: var(--ocra);
             padding: 4px 8px;
             border-radius: 4px;
             border: none;
@@ -969,20 +976,20 @@ HTML_TEMPLATE = '''
             flex-shrink: 0;
         }
         
-        .marker-quick-btn-inline:hover { background: #d97706; }
+        .marker-quick-btn-inline:hover { background: var(--ocra); }
 
         /* Edit tool toggle (Grabber / Selector) */
         .tool-toggle {
             display: inline-flex;
             flex-shrink: 0;
-            border: 1px solid #475569;
+            border: 1px solid var(--rule-soft);
             border-radius: 5px;
             overflow: hidden;
         }
         .tool-btn {
-            background: #334155;
+            background: var(--calce);
             border: none;
-            color: #94a3b8;
+            color: var(--grafite);
             width: 26px;
             height: 26px;
             cursor: pointer;
@@ -993,14 +1000,14 @@ HTML_TEMPLATE = '''
             align-items: center;
             justify-content: center;
         }
-        .tool-btn + .tool-btn { border-left: 1px solid #475569; }
-        .tool-btn:hover { background: #475569; color: #e2e8f0; }
-        .tool-btn.active { background: #3b82f6; color: #fff; }
+        .tool-btn + .tool-btn { border-left: 1px solid var(--rule-soft); }
+        .tool-btn:hover { background: var(--calce); color: var(--inchiostro); }
+        .tool-btn.active { background: var(--grigioverde); color: var(--inchiostro); }
         .tool-name-display {
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            color: #60a5fa;
+            color: var(--ardesia);
             margin-right: 8px;
             flex-shrink: 0;
         }
@@ -1030,16 +1037,16 @@ HTML_TEMPLATE = '''
             white-space: nowrap;
         }
         .sel-btn {
-            background: #475569;
+            background: var(--calce);
             border: none;
-            color: #e2e8f0;
+            color: var(--inchiostro);
             border-radius: 3px;
             padding: 1px 6px;
             font-size: 10px;
             cursor: pointer;
         }
-        .sel-btn:hover { background: #64748b; }
-        .zoom-btn.active { background: #3b82f6; color: #fff; }
+        .sel-btn:hover { background: var(--intonaco); }
+        .zoom-btn.active { background: var(--grigioverde); color: var(--inchiostro); }
 
         /* Waveform zoom controls */
         .waveform-zoom-controls {
@@ -1049,9 +1056,9 @@ HTML_TEMPLATE = '''
             flex-shrink: 0;
         }
         .zoom-btn {
-            background: #475569;
+            background: var(--calce);
             border: none;
-            color: #e2e8f0;
+            color: var(--inchiostro);
             width: 24px;
             height: 24px;
             border-radius: 4px;
@@ -1062,7 +1069,7 @@ HTML_TEMPLATE = '''
             align-items: center;
             justify-content: center;
         }
-        .zoom-btn:hover { background: #64748b; }
+        .zoom-btn:hover { background: var(--intonaco); }
         .zoom-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .zoom-level-display {
             font-family: monospace;
@@ -1074,9 +1081,9 @@ HTML_TEMPLATE = '''
 
         /* Marker-line visibility selector */
         .marker-visibility-btn {
-            background: #475569;
+            background: var(--calce);
             border: none;
-            color: #e2e8f0;
+            color: var(--inchiostro);
             padding: 4px 8px;
             border-radius: 4px;
             cursor: pointer;
@@ -1086,11 +1093,11 @@ HTML_TEMPLATE = '''
             gap: 4px;
             flex-shrink: 0;
         }
-        .marker-visibility-btn:hover { background: #64748b; }
+        .marker-visibility-btn:hover { background: var(--intonaco); }
         .marker-visibility-menu {
             position: absolute;
-            background: #1e293b;
-            border: 1px solid #475569;
+            background: var(--intonaco);
+            border: 1px solid var(--rule-soft);
             border-radius: 6px;
             padding: 6px;
             min-width: 180px;
@@ -1105,11 +1112,11 @@ HTML_TEMPLATE = '''
             gap: 6px;
             padding: 4px 6px;
             font-size: 12px;
-            color: #e2e8f0;
+            color: var(--inchiostro);
             cursor: pointer;
             border-radius: 3px;
         }
-        .marker-visibility-menu label:hover { background: #334155; }
+        .marker-visibility-menu label:hover { background: var(--calce); }
         .marker-visibility-menu input[type="checkbox"] {
             width: 14px;
             height: 14px;
@@ -1117,7 +1124,7 @@ HTML_TEMPLATE = '''
         }
         .marker-visibility-menu hr {
             border: none;
-            border-top: 1px solid #475569;
+            border-top: 1px solid var(--rule-soft);
             margin: 4px 0;
         }
         .marker-visibility-menu .mv-swatch {
@@ -1136,8 +1143,8 @@ HTML_TEMPLATE = '''
             height: 500px;
             min-width: 300px;
             min-height: 200px;
-            background: #1e293b;
-            border: 1px solid #475569;
+            background: var(--intonaco);
+            border: 1px solid var(--rule-soft);
             border-radius: 8px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
             z-index: 500;
@@ -1150,8 +1157,8 @@ HTML_TEMPLATE = '''
             justify-content: space-between;
             align-items: center;
             padding: 8px 12px;
-            border-bottom: 1px solid #475569;
-            background: #334155;
+            border-bottom: 1px solid var(--rule-soft);
+            background: var(--calce);
             cursor: move;
             user-select: none;
             border-radius: 8px 8px 0 0;
@@ -1159,7 +1166,7 @@ HTML_TEMPLATE = '''
         }
         .linked-file-panel-title {
             font-size: 13px;
-            color: #e2e8f0;
+            color: var(--inchiostro);
             font-weight: 600;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -1170,19 +1177,19 @@ HTML_TEMPLATE = '''
         .linked-file-panel-close {
             background: none;
             border: none;
-            color: #94a3b8;
+            color: var(--grafite);
             font-size: 20px;
             cursor: pointer;
             padding: 0 6px;
             line-height: 1;
         }
-        .linked-file-panel-close:hover { color: #e2e8f0; }
+        .linked-file-panel-close:hover { color: var(--inchiostro); }
         .linked-file-panel-path {
             font-size: 11px;
-            color: #94a3b8;
+            color: var(--grafite);
             font-family: monospace;
             padding: 6px 12px;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid var(--rule-soft);
             word-break: break-all;
             flex-shrink: 0;
         }
@@ -1192,19 +1199,19 @@ HTML_TEMPLATE = '''
             padding: 12px;
             font-family: ui-monospace, Menlo, Consolas, monospace;
             font-size: 12px;
-            color: #e2e8f0;
+            color: var(--inchiostro);
             white-space: pre-wrap;
             word-break: break-word;
-            background: #0f172a;
+            background: var(--intonaco);
         }
         .linked-file-panel-content.loading,
         .linked-file-panel-content.error {
             font-family: inherit;
-            color: #94a3b8;
+            color: var(--grafite);
             text-align: center;
             padding: 40px 16px;
         }
-        .linked-file-panel-content.error { color: #f87171; }
+        .linked-file-panel-content.error { color: var(--rosso); }
         .linked-file-panel-resize {
             position: absolute;
             right: 0;
@@ -1212,7 +1219,7 @@ HTML_TEMPLATE = '''
             width: 14px;
             height: 14px;
             cursor: nwse-resize;
-            background: linear-gradient(135deg, transparent 50%, #64748b 50%, #64748b 60%, transparent 60%, transparent 70%, #64748b 70%, #64748b 80%, transparent 80%);
+            background: linear-gradient(135deg, transparent 50%, var(--intonaco) 50%, var(--intonaco) 60%, transparent 60%, transparent 70%, var(--intonaco) 70%, var(--intonaco) 80%, transparent 80%);
         }
         
         .file-checkbox {
@@ -1225,8 +1232,8 @@ HTML_TEMPLATE = '''
         
         /* Batch operations panel */
         .batch-panel {
-            background: #1e293b;
-            border-top: 1px solid #475569;
+            background: var(--intonaco);
+            border-top: 1px solid var(--rule-soft);
             padding: 12px;
             display: none;
         }
@@ -1236,7 +1243,7 @@ HTML_TEMPLATE = '''
         }
         
         .batch-info {
-            color: #10b981;
+            color: var(--ok);
             font-size: 14px;
             margin-bottom: 8px;
         }
@@ -1266,7 +1273,7 @@ HTML_TEMPLATE = '''
         }
         
         .modal {
-            background: #334155;
+            background: var(--calce);
             border-radius: 8px;
             padding: 24px;
             max-width: 500px;
@@ -1276,7 +1283,7 @@ HTML_TEMPLATE = '''
         
         .modal h2 {
             margin-bottom: 16px;
-            color: #e2e8f0;
+            color: var(--inchiostro);
         }
         
         .shortcut-list {
@@ -1285,13 +1292,13 @@ HTML_TEMPLATE = '''
         
         .shortcut-list li {
             padding: 8px 0;
-            border-bottom: 1px solid #475569;
+            border-bottom: 1px solid var(--rule-soft);
             display: flex;
             justify-content: space-between;
         }
         
         .shortcut-key {
-            background: #475569;
+            background: var(--calce);
             padding: 2px 8px;
             border-radius: 4px;
             font-family: monospace;
@@ -1310,7 +1317,7 @@ HTML_TEMPLATE = '''
             align-items: center;
             justify-content: space-between;
             padding: 6px 8px;
-            background: #475569;
+            background: var(--calce);
             border-radius: 4px;
             margin-bottom: 4px;
             font-size: 13px;
@@ -1318,7 +1325,7 @@ HTML_TEMPLATE = '''
         
         .marker-time {
             font-family: monospace;
-            color: #60a5fa;
+            color: var(--ardesia);
         }
         
         .marker-label {
@@ -1330,13 +1337,13 @@ HTML_TEMPLATE = '''
         }
         
         .marker-label:hover {
-            background: #475569;
+            background: var(--calce);
         }
         
         .marker-remove {
             background: none;
             border: none;
-            color: #ef4444;
+            color: var(--rosso);
             cursor: pointer;
             font-size: 16px;
             padding: 0 4px;
@@ -1358,7 +1365,7 @@ HTML_TEMPLATE = '''
         .marker-time {
             font-family: monospace;
             font-size: 12px;
-            color: #94a3b8;
+            color: var(--grafite);
             cursor: ew-resize;
             padding: 2px 4px;
             border-radius: 2px;
@@ -1366,19 +1373,19 @@ HTML_TEMPLATE = '''
         }
         
         .marker-time:hover {
-            background: #475569;
-            color: #e2e8f0;
+            background: var(--calce);
+            color: var(--inchiostro);
         }
         
         .marker-time-separator {
-            color: #64748b;
+            color: var(--grafite);
             margin: 0 2px;
         }
         
         .marker-play-btn {
             background: none;
             border: none;
-            color: #3b82f6;
+            color: var(--ardesia);
             cursor: pointer;
             font-size: 12px;
             padding: 2px 6px;
@@ -1390,9 +1397,9 @@ HTML_TEMPLATE = '''
         }
         
         .marker-color-select {
-            background: #334155;
-            border: 1px solid #475569;
-            color: #e2e8f0;
+            background: var(--calce);
+            border: 1px solid var(--rule-soft);
+            color: var(--inchiostro);
             border-radius: 4px;
             padding: 2px 4px;
             font-size: 11px;
@@ -1403,8 +1410,8 @@ HTML_TEMPLATE = '''
         /* Color picker popup */
         .color-picker-popup {
             position: absolute;
-            background: #1e293b;
-            border: 1px solid #475569;
+            background: var(--intonaco);
+            border: 1px solid var(--rule-soft);
             border-radius: 8px;
             padding: 8px;
             display: grid;
@@ -1423,12 +1430,12 @@ HTML_TEMPLATE = '''
         }
         
         .color-picker-swatch:hover {
-            border-color: #fff;
+            border-color: var(--rule);
             transform: scale(1.1);
         }
         
         .color-picker-swatch.selected {
-            border-color: #fff;
+            border-color: var(--rule);
         }
         
         .marker-input-row {
@@ -1458,7 +1465,7 @@ HTML_TEMPLATE = '''
         
         .panel-resize-handle:hover,
         .panel-resize-handle.dragging {
-            background: #3b82f6;
+            background: var(--grigioverde);
         }
         
         .panel-resize-handle::after {
@@ -1469,7 +1476,7 @@ HTML_TEMPLATE = '''
             transform: translate(-50%, -50%);
             width: 3px;
             height: 30px;
-            background: #64748b;
+            background: var(--intonaco);
             border-radius: 2px;
             opacity: 0;
         }
@@ -1481,14 +1488,14 @@ HTML_TEMPLATE = '''
         /* Data link display */
         .datalink-display {
             padding: 8px;
-            background: #475569;
+            background: var(--calce);
             border-radius: 4px;
             font-size: 13px;
             word-break: break-all;
         }
         
         .datalink-display a {
-            color: #60a5fa;
+            color: var(--ardesia);
             text-decoration: none;
         }
         
@@ -1502,20 +1509,20 @@ HTML_TEMPLATE = '''
             gap: 8px;
             align-items: center;
             padding: 8px 12px;
-            background: #1e293b;
-            border-bottom: 1px solid #475569;
+            background: var(--intonaco);
+            border-bottom: 1px solid var(--rule-soft);
         }
         
         .selection-count {
-            color: #94a3b8;
+            color: var(--grafite);
             font-size: 13px;
         }
         
         /* Help button */
         .help-btn {
-            background: #475569;
+            background: var(--calce);
             border: none;
-            color: #94a3b8;
+            color: var(--grafite);
             width: 24px;
             height: 24px;
             border-radius: 50%;
@@ -1525,8 +1532,8 @@ HTML_TEMPLATE = '''
         }
         
         .help-btn:hover {
-            background: #64748b;
-            color: #e2e8f0;
+            background: var(--intonaco);
+            color: var(--inchiostro);
         }
         
         /* Dropdown menu */
@@ -1544,8 +1551,8 @@ HTML_TEMPLATE = '''
             position: absolute;
             top: 100%;
             left: 0;
-            background: #1e293b;
-            border: 1px solid #475569;
+            background: var(--intonaco);
+            border: 1px solid var(--rule-soft);
             border-radius: 8px;
             min-width: 200px;
             padding: 8px 0;
@@ -1561,32 +1568,32 @@ HTML_TEMPLATE = '''
         .dropdown-item {
             padding: 8px 16px;
             cursor: pointer;
-            color: #e2e8f0;
+            color: var(--inchiostro);
         }
         
         .dropdown-item:hover {
-            background: #334155;
+            background: var(--calce);
         }
         
         .dropdown-divider {
             height: 1px;
-            background: #475569;
+            background: var(--calce);
             margin: 8px 0;
         }
         
         .dropdown-label {
             padding: 8px 16px;
-            color: #64748b;
+            color: var(--grafite);
             font-size: 11px;
             text-transform: uppercase;
             font-weight: 600;
         }
         
         .db-name {
-            color: #64748b;
+            color: var(--grafite);
             font-size: 13px;
             padding: 4px 8px;
-            background: #334155;
+            background: var(--calce);
             border-radius: 4px;
         }
         
@@ -1595,14 +1602,14 @@ HTML_TEMPLATE = '''
             display: flex;
             align-items: center;
             gap: 6px;
-            color: #94a3b8;
+            color: var(--grafite);
             font-size: 12px;
         }
         
         .speed-control select {
-            background: #475569;
-            border: 1px solid #64748b;
-            color: #e2e8f0;
+            background: var(--calce);
+            border: 1px solid var(--rule-soft);
+            color: var(--inchiostro);
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 12px;
@@ -1652,6 +1659,7 @@ HTML_TEMPLATE = '''
             margin-top: 8px;
         }
     </style>
+    <link rel="stylesheet" href="/ui/quadro.css?v=1">
 </head>
 <body>
     <audio id="audio-player" style="display: none;"></audio>
@@ -1667,42 +1675,71 @@ HTML_TEMPLATE = '''
     
     <!-- Help Modal -->
     <div class="modal-overlay" id="help-modal" onclick="if(event.target === this) closeHelp()">
-        <div class="modal">
-            <h2>Keyboard Shortcuts</h2>
+        <div class="modal shortcuts-modal">
+            <h2>Shortcuts</h2>
+            <div class="sc-head">
+                <span class="sc-section">Keyboard</span>
+                <span class="sc-tools">
+                    <button class="btn btn-small" id="sc-reset-btn" onclick="resetShortcuts()" style="display:none;">Reset to defaults</button>
+                    <button class="btn btn-small" id="sc-edit-btn" onclick="toggleShortcutEdit()">Customise</button>
+                </span>
+            </div>
+            <div class="sc-note" id="sc-note"></div>
+            <ul class="shortcut-list" id="shortcut-list-keys"></ul>
+            <div class="sc-head"><span class="sc-section">Mouse and controls</span></div>
             <ul class="shortcut-list">
-                <li><span>Navigate files</span><span class="shortcut-key">↑ ↓</span></li>
-                <li><span>Play/Pause selected</span><span class="shortcut-key">Space</span></li>
-                <li><span>Delete selected file(s)</span><span class="shortcut-key">Delete / Backspace</span></li>
-                <li><span>Select all files</span><span class="shortcut-key">⌘/Ctrl + A</span></li>
-                <li><span>Deselect all</span><span class="shortcut-key">Escape</span></li>
-                <li><span>Quick add tag</span><span class="shortcut-key">⌘/Ctrl + T</span></li>
-                <li><span>Open database</span><span class="shortcut-key">⌘/Ctrl + Shift + O</span></li>
-                <li><span>Save project</span><span class="shortcut-key">⌘/Ctrl + S</span></li>
-                <li><span>Import audio</span><span class="shortcut-key">⌘/Ctrl + Shift + I</span></li>
-                <li><span>Search fields (left)</span><span class="shortcut-key">⌘/Ctrl + Shift + J</span></li>
-                <li><span>Search files (center)</span><span class="shortcut-key">⌘/Ctrl + Shift + K</span></li>
-                <li><span>Search field content (right)</span><span class="shortcut-key">⌘/Ctrl + Shift + L</span></li>
-                <li><span>New field</span><span class="shortcut-key">⌘/Ctrl + Shift + N</span></li>
-                <li><span>Drop marker at playhead (or from selection)</span><span class="shortcut-key">M</span></li>
-                <li><span>Grabber tool (drag scrolls)</span><span class="shortcut-key">G / F8</span></li>
-                <li><span>Selector tool (drag selects)</span><span class="shortcut-key">S / F7</span></li>
                 <li><span>Extend selection (Selector)</span><span class="shortcut-key">⇧ + click</span></li>
-                <li><span>Play selection</span><span class="shortcut-key">Space</span></li>
-                <li><span>Clear selection</span><span class="shortcut-key">Escape</span></li>
                 <li><span>Scroll zoomed waveform</span><span class="shortcut-key">Two-finger swipe ←/→</span></li>
-                <li><span>Jump to next marker</span><span class="shortcut-key">⌘/Ctrl + Shift + M</span></li>
-                <li><span>Jump to previous marker</span><span class="shortcut-key">⌘/Ctrl + Shift + ,</span></li>
-                <li><span>Zoom waveform in / out</span><span class="shortcut-key">R / T</span></li>
                 <li><span>Scroll / pan waveform</span><span class="shortcut-key">Drag (Grabber)</span></li>
                 <li><span>Seek playhead</span><span class="shortcut-key">Click on waveform</span></li>
                 <li><span>Scrub playhead</span><span class="shortcut-key">⌘ + drag</span></li>
                 <li><span>Move marker edge</span><span class="shortcut-key">⌥ + drag near edge</span></li>
                 <li><span>Zoom waveform (time)</span><span class="shortcut-key">⇧ + drag ←/→</span></li>
                 <li><span>Zoom waveform (amplitude)</span><span class="shortcut-key">⇧ + drag ↑/↓</span></li>
-                <li><span>Undo</span><span class="shortcut-key">⌘/Ctrl + Z</span></li>
-                <li><span>Redo</span><span class="shortcut-key">⌘/Ctrl + Shift + Z</span></li>
+                <li><span>Waveform / spectrogram / both</span><span class="shortcut-key">WAVE · SPECTRO keys</span></li>
+                <li><span>Show / hide panels</span><span class="shortcut-key">AUDIO · FIELDS · FILES · INFO keys</span></li>
+                <li><span>Swap two panels</span><span class="shortcut-key">Drag a title bar onto a panel</span></li>
             </ul>
             <button class="btn" style="margin-top: 16px; width: 100%;" onclick="closeHelp()">Close</button>
+        </div>
+    </div>
+
+    <!-- New field dialog -->
+    <div class="modal-overlay" id="field-modal" onclick="if(event.target === this) closeFieldDialog()">
+        <div class="modal qd-dialog" role="dialog" aria-labelledby="field-modal-title">
+            <div class="qd-dialog-bar">
+                <span id="field-modal-title">New field</span>
+                <button class="qd-dialog-close" onclick="closeFieldDialog()" title="Close (Esc)">×</button>
+            </div>
+            <div class="qd-dialog-body">
+                <label class="qd-label" for="nf-name">Name</label>
+                <input type="text" id="nf-name" placeholder="e.g. Speaker, Quality, Transcription" autocomplete="off">
+                <div class="qd-label">Type</div>
+                <div class="nf-types" id="nf-types">
+                    <button type="button" class="nf-type" data-type="parameter"><span class="tool-lamp"></span><b>Parameter</b><small>A number in a range, set with a slider</small></button>
+                    <button type="button" class="nf-type" data-type="text"><span class="tool-lamp"></span><b>Text</b><small>Free notes</small></button>
+                    <button type="button" class="nf-type" data-type="choice"><span class="tool-lamp"></span><b>Choice</b><small>One option from a list</small></button>
+                    <button type="button" class="nf-type" data-type="tags"><span class="tool-lamp"></span><b>Tags</b><small>Several labels</small></button>
+                    <button type="button" class="nf-type" data-type="date"><span class="tool-lamp"></span><b>Date</b><small>A calendar date</small></button>
+                    <button type="button" class="nf-type" data-type="markers"><span class="tool-lamp"></span><b>Markers</b><small>Time ranges on the audio</small></button>
+                    <button type="button" class="nf-type" data-type="datalink"><span class="tool-lamp"></span><b>Data link</b><small>A linked file (transcription, analysis), searchable</small></button>
+                </div>
+                <div class="nf-opts" id="nf-opts-parameter">
+                    <div class="nf-range">
+                        <label><span class="qd-label">Min</span><input type="number" id="nf-min" value="0" step="any"></label>
+                        <label><span class="qd-label">Max</span><input type="number" id="nf-max" value="10" step="any"></label>
+                    </div>
+                </div>
+                <div class="nf-opts" id="nf-opts-choice">
+                    <label class="qd-label" for="nf-choices">Options, one per line</label>
+                    <textarea id="nf-choices" rows="4" placeholder="Interview&#10;Song&#10;Ambient"></textarea>
+                </div>
+                <div class="nf-error" id="nf-error"></div>
+            </div>
+            <div class="qd-dialog-keys">
+                <button class="btn btn-secondary" onclick="closeFieldDialog()">Cancel</button>
+                <button class="btn qd-commit" id="nf-create" onclick="submitFieldDialog()">Create field</button>
+            </div>
         </div>
     </div>
 
@@ -1730,8 +1767,7 @@ HTML_TEMPLATE = '''
                     <div class="dropdown-item" onclick="exportToCSV()">Export to CSV...</div>
                     <div class="dropdown-item" onclick="exportToExcel()">Export to Excel...</div>
                     <div class="dropdown-item" onclick="exportForMax()">Export for Max</div>
-                    <div class="dropdown-item" onclick="exportMarkersMidi()">Export Markers for Pro Tools (MIDI)...</div>
-                    <div class="dropdown-divider"></div>
+<div class="dropdown-divider"></div>
                     <div class="dropdown-label">Recent Databases</div>
                     <div id="recent-databases"></div>
                 </div>
@@ -1743,75 +1779,139 @@ HTML_TEMPLATE = '''
             <button class="btn btn-secondary" onclick="linkMetadataFiles()">Link Metadata</button>
             <button class="btn btn-secondary" onclick="toggleQuery()">Query</button>
             <button class="btn btn-secondary" onclick="showConsole()">Console</button>
-            <div class="speed-control">
-                <label>Speed:</label>
-                <select id="playback-speed" onchange="changePlaybackSpeed(this.value)">
-                    <option value="0.5">0.5x</option>
-                    <option value="0.75">0.75x</option>
-                    <option value="1" selected>1x</option>
-                    <option value="1.25">1.25x</option>
-                    <option value="1.5">1.5x</option>
-                    <option value="2">2x</option>
-                </select>
+            <div class="view-keys" title="Show or hide panels. Drag a panel's title bar onto another panel to swap them.">
+                <button class="view-key" id="view-key-wave" onclick="toggleView('wave')"><span class="tool-lamp"></span>Audio</button>
+                <button class="view-key" id="view-key-fields" onclick="toggleView('fields')"><span class="tool-lamp"></span>Fields</button>
+                <button class="view-key" id="view-key-files" onclick="toggleView('files')"><span class="tool-lamp"></span>Files</button>
+                <button class="view-key" id="view-key-info" onclick="toggleView('info')"><span class="tool-lamp"></span>Info</button>
             </div>
-            <button class="help-btn" onclick="toggleTheme()" title="Toggle light/dark theme" id="theme-btn">Light</button>
+            <button class="help-btn" onclick="toggleTheme()" title="Toggle day/night theme" id="theme-btn">Dark</button>
             <button class="help-btn" onclick="showHelp()" title="Keyboard shortcuts">?</button>
         </div>
     </div>
     
     <!-- Query Builder (hidden by default) -->
-    <div id="query-panel" style="display: none; background: #1e293b; border-bottom: 1px solid #475569; padding: 16px;">
+    <div id="query-panel" style="display: none; background: var(--intonaco); border-bottom: 1px solid var(--rule-soft); padding: 16px;">
         <div style="margin-bottom: 12px;">
             <div id="query-conditions">
                 <div class="query-condition" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
-                    <select id="qfield-0" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b;">
+                    <select id="qfield-0" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft);">
                         <option value="">Select field...</option>
                     </select>
-                    <select id="qop-0" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b;">
+                    <select id="qop-0" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft);">
                         <option value="=">=</option>
                         <option value=">">></option>
                         <option value="<"><</option>
                         <option value="contains">contains</option>
                     </select>
-                    <input type="text" id="qval-0" placeholder="value" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b; width: 150px;">
+                    <input type="text" id="qval-0" placeholder="value" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft); width: 150px;">
                 </div>
             </div>
             <button class="btn" style="font-size: 12px; padding: 4px 12px;" onclick="addQueryCondition()">+ Add Condition</button>
         </div>
-        <div style="display: flex; gap: 12px; align-items: center; padding-top: 12px; border-top: 1px solid #475569;">
-            <span style="color: #94a3b8; font-size: 14px;">Sort by:</span>
-            <select id="sort-field" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b;">
+        <div style="display: flex; gap: 12px; align-items: center; padding-top: 12px; border-top: 1px solid var(--rule-soft);">
+            <span style="color: var(--grafite); font-size: 14px;">Sort by:</span>
+            <select id="sort-field" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft);">
                 <option value="">Filename</option>
             </select>
-            <select id="sort-order" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b;">
+            <select id="sort-order" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft);">
                 <option value="asc">Ascending</option>
                 <option value="desc">Descending</option>
             </select>
             <button class="btn" onclick="runQuery()" style="margin-left: auto;">Search</button>
             <button class="btn btn-secondary" onclick="clearQuery()">Clear</button>
         </div>
-        <div id="query-results" style="margin-top: 12px; color: #10b981; font-size: 14px;"></div>
+        <div id="query-results" style="margin-top: 12px; color: var(--ok); font-size: 14px;"></div>
     </div>
     
     <!-- Console Panel (hidden by default) -->
-    <div id="console-panel" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 320px; background: #1e293b; border-top: 2px solid #3b82f6; z-index: 9000; font-family: monospace; font-size: 13px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: #334155; border-bottom: 1px solid #475569;">
-            <span style="color: #e2e8f0; font-weight: 600;">Console</span>
+    <div id="console-panel" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 320px; background: var(--intonaco); border-top: 2px solid var(--ardesia); z-index: 9000; font-family: monospace; font-size: 13px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: var(--calce); border-bottom: 1px solid var(--rule-soft);">
+            <span style="color: var(--inchiostro); font-weight: 600;">Console</span>
             <div>
-                <span onclick="consoleRunCmd('help')" style="color:#94a3b8;cursor:pointer;margin-right:8px;font-size:12px;">help</span>
-                <span onclick="document.getElementById('console-output').innerHTML=''" style="color:#94a3b8;cursor:pointer;margin-right:8px;font-size:12px;">clear</span>
-                <span onclick="document.getElementById('console-panel').style.display='none'" style="color:#94a3b8;cursor:pointer;font-size:16px;">&#10005;</span>
+                <span onclick="consoleRunCmd('help')" style="color:var(--grafite);cursor:pointer;margin-right:8px;font-size:12px;">help</span>
+                <span onclick="document.getElementById('console-output').innerHTML=''" style="color:var(--grafite);cursor:pointer;margin-right:8px;font-size:12px;">clear</span>
+                <span onclick="document.getElementById('console-panel').style.display='none'" style="color:var(--grafite);cursor:pointer;font-size:16px;">&#10005;</span>
             </div>
         </div>
-        <div id="console-output" style="flex: 1; overflow-y: auto; padding: 8px 12px; color: #e2e8f0; white-space: pre-wrap; line-height: 1.5; height: 240px;"></div>
-        <div style="display: flex; align-items: center; padding: 6px 12px; border-top: 1px solid #475569; background: #334155;">
-            <span style="color:#3b82f6;margin-right:8px;">&gt;</span>
-            <input id="console-input" type="text" onkeydown="consoleKeyDown(event)" style="flex:1; background:transparent; border:none; outline:none; color:#e2e8f0; font-family:monospace; font-size:13px;" placeholder="stats FieldName / wordfreq FieldName 50 / help" autocomplete="off">
+        <div id="console-output" style="flex: 1; overflow-y: auto; padding: 8px 12px; color: var(--inchiostro); white-space: pre-wrap; line-height: 1.5; height: 240px;"></div>
+        <div style="display: flex; align-items: center; padding: 6px 12px; border-top: 1px solid var(--rule-soft); background: var(--calce);">
+            <span style="color:var(--ardesia);margin-right:8px;">&gt;</span>
+            <input id="console-input" type="text" onkeydown="consoleKeyDown(event)" style="flex:1; background:transparent; border:none; outline:none; color:var(--inchiostro); font-family:monospace; font-size:13px;" placeholder="stats FieldName / wordfreq FieldName 50 / help" autocomplete="off">
         </div>
     </div>
     
+    <!-- Waveform strip (full width). Shown/hidden with the WAVE view key. -->
+    <section class="wave-strip" id="wave-strip">
+        <div class="panel-header wave-strip-bar"><span>Audio</span></div>
+        <div class="wave-strip-empty" id="wave-strip-empty">Select a file and press Space (or ▶) to load it</div>
+        <div class="player-bar-inline" id="player-bar">
+            <div class="player-controls-inline">
+                <button class="player-btn" id="player-play-btn" onclick="togglePlayPause()">▶</button>
+                <div class="tool-toggle display-keys" title="Display: waveform, spectrogram, or both stacked">
+                    <button class="tool-btn" id="disp-wave-btn" onclick="toggleDisplay('wave')"><span class="tool-lamp"></span>Wave</button>
+                    <button class="tool-btn" id="disp-spec-btn" onclick="toggleDisplay('spec')"><span class="tool-lamp"></span>Spectro</button>
+                </div>
+                <div class="tool-toggle" title="Edit tool">
+                    <button class="tool-btn" id="tool-selector-btn" onclick="setWaveTool('selector')" title="Selector (S): drag to select a range, click to place playhead"><span class="tool-lamp"></span>Select</button>
+                    <button class="tool-btn active" id="tool-grabber-btn" onclick="setWaveTool('grabber')" title="Grabber (G): drag to scroll, click to seek"><span class="tool-lamp"></span>Grab</button>
+                </div>
+                <span class="player-time-inline"><span id="player-current-time">00:00</span> / <span id="player-duration">00:00</span></span>
+                <label class="speed-glass" title="Playback speed">
+                    <span class="speed-glass-cap">Speed</span>
+                    <select id="playback-speed" onchange="changePlaybackSpeed(this.value)">
+                        <option value="0.5">0.50×</option>
+                        <option value="0.75">0.75×</option>
+                        <option value="1" selected>1.00×</option>
+                        <option value="1.25">1.25×</option>
+                        <option value="1.5">1.50×</option>
+                        <option value="2">2.00×</option>
+                    </select>
+                </label>
+                <button class="zoom-btn" id="waveform-extras-toggle" onclick="toggleWaveformExtras()" title="Show/hide zoom &amp; marker controls" style="width:auto;padding:0 6px;font-size:11px;">▸</button>
+                <div id="waveform-extras" style="display:none; align-items:center; gap:8px;">
+                    <div class="waveform-zoom-controls" title="Zoom waveform (scroll wheel on waveform also works)">
+                        <button class="zoom-btn" id="zoom-out-btn" onclick="zoomWaveform(1/1.5)" title="Zoom out">−</button>
+                        <span class="zoom-level-display" id="zoom-level-display">1.0x</span>
+                        <button class="zoom-btn" id="zoom-in-btn" onclick="zoomWaveform(1.5)" title="Zoom in">+</button>
+                        <button class="zoom-btn" id="zoom-reset-btn" onclick="resetWaveformZoom()" title="Reset zoom" style="width:auto;padding:0 6px;font-size:10px;">1:1</button>
+                        <button class="zoom-btn" id="wave-db-btn" onclick="toggleWaveformDb()" title="Amplitude scale" style="width:auto;padding:0 6px;font-size:10px;margin-left:4px;">Lin</button>
+                    </div>
+                    <div style="position: relative;">
+                        <button class="marker-visibility-btn" id="marker-visibility-btn" onclick="toggleMarkerVisibilityMenu(event)" title="Choose which marker lines to display">
+                            <span id="marker-visibility-label">Markers</span> ▾
+                        </button>
+                        <div class="marker-visibility-menu" id="marker-visibility-menu"></div>
+                    </div>
+                </div>
+                <button class="marker-quick-btn-inline" onclick="dropMarkerAtPlayhead()" title="Drop marker (M)">M</button>
+            </div>
+            <div class="player-progress-container" id="player-progress-container" title="Grabber (G): drag scrolls · Selector (S): drag selects, M makes a marker · Click: seek · ⌘+drag: scrub playhead · ⌥+drag: move marker edge · ⇧+drag: zoom (←→ time, ↑↓ amplitude) · r/t: zoom in/out">
+                    <canvas class="spectro-canvas" id="spectro-canvas"></canvas>
+                    <canvas class="waveform-canvas" id="waveform-canvas"></canvas>
+                    <div class="player-progress" id="player-progress"></div>
+                    <div class="player-playhead" id="player-playhead"></div>
+                    <div class="player-markers" id="player-markers"></div>
+                    <div class="wave-selection" id="wave-selection"></div>
+                </div>
+            <div class="player-info-row">
+                <span class="tool-name-display" id="tool-name-display" title="Current edit tool (G = Grabber, S = Selector)">Grabber</span>
+                <span class="player-filename-inline" id="player-filename"></span>
+                <span class="wave-sel-info" id="wave-sel-info" style="display:none;">
+                    <span id="wave-sel-text"></span>
+                    <button class="sel-btn" onclick="createMarkerFromSelection()" title="Create a marker from the selection (M)">+ Marker</button>
+                    <button class="sel-btn" onclick="playSelection()" title="Play selection (Space)">▶</button>
+                    <button class="sel-btn" onclick="zoomToSelection()" title="Zoom to selection">Zoom</button>
+                    <button class="sel-btn" onclick="clearWaveSelection()" title="Clear selection (Esc)">×</button>
+                </span>
+                <span class="audio-info" id="audio-info"></span>
+            </div>
+            <div class="player-resize-handle" onmousedown="startPlayerResize(event)" title="Drag to resize waveform"></div>
+        </div>
+    </section>
+
     <div class="main" id="main-container">
-        <!-- Left Panel: Fields -->
+<!-- Left Panel: Fields -->
         <div class="panel panel-left" id="panel-left">
             <div class="panel-header">
                 <span>Fields</span>
@@ -1819,9 +1919,9 @@ HTML_TEMPLATE = '''
                     <button class="btn btn-small" onclick="newField()">+ New</button>
                 </div>
             </div>
-            <div style="padding: 8px; border-bottom: 1px solid #475569;">
+            <div style="padding: 8px; border-bottom: 1px solid var(--rule-soft);">
                 <input type="text" id="field-search" placeholder="Search fields... (⌘⇧J)" 
-                    style="width: 100%; background: #475569; border: 1px solid #64748b; color: #e2e8f0; padding: 6px; border-radius: 4px; font-size: 13px;"
+                    style="width: 100%; background: var(--calce); border: 1px solid var(--rule-soft); color: var(--inchiostro); padding: 6px; border-radius: 4px; font-size: 13px;"
                     oninput="filterFields(this.value)">
             </div>
             <div class="panel-content" id="fields-list">
@@ -1829,9 +1929,7 @@ HTML_TEMPLATE = '''
             </div>
         </div>
         
-        <!-- Resize handle between left and center -->
-        <div class="panel-resize-handle" id="resize-left" onmousedown="startResize(event, 'left')"></div>
-        
+
         <!-- Center Panel: Files -->
         <div class="panel panel-center" id="panel-center">
             <div class="panel-header">
@@ -1841,56 +1939,8 @@ HTML_TEMPLATE = '''
                 <input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAll(this.checked)" style="width: 18px; height: 18px; cursor: pointer;">
                 <span class="selection-count" id="selection-count">0 selected</span>
                 <input type="text" id="file-search" placeholder="Search files... (⌘⇧K)" 
-                    style="flex: 1; background: #475569; border: 1px solid #64748b; color: #e2e8f0; padding: 6px; border-radius: 4px; font-size: 13px; margin-left: 8px;"
+                    style="flex: 1; background: var(--calce); border: 1px solid var(--rule-soft); color: var(--inchiostro); padding: 6px; border-radius: 4px; font-size: 13px; margin-left: 8px;"
                     oninput="filterFiles(this.value)">
-            </div>
-            <!-- Audio Player Bar (inline) -->
-            <div class="player-bar-inline" id="player-bar">
-                <div class="player-controls-inline">
-                    <button class="player-btn" id="player-play-btn" onclick="togglePlayPause()">▶</button>
-                    <div class="tool-toggle" title="Edit tool">
-                        <button class="tool-btn active" id="tool-grabber-btn" onclick="setWaveTool('grabber')" title="Grabber (G): drag to scroll, click to seek">✋</button>
-                        <button class="tool-btn" id="tool-selector-btn" onclick="setWaveTool('selector')" title="Selector (S): drag to select a range, click to place playhead">I</button>
-                    </div>
-                    <div class="player-progress-container" id="player-progress-container" title="Grabber (G): drag scrolls · Selector (S): drag selects, M makes a marker · Click: seek · ⌘+drag: scrub playhead · ⌥+drag: move marker edge · ⇧+drag: zoom (←→ time, ↑↓ amplitude) · r/t: zoom in/out">
-                        <canvas class="waveform-canvas" id="waveform-canvas"></canvas>
-                        <div class="player-progress" id="player-progress"></div>
-                        <div class="player-playhead" id="player-playhead"></div>
-                        <div class="player-markers" id="player-markers"></div>
-                        <div class="wave-selection" id="wave-selection"></div>
-                    </div>
-                    <span class="player-time-inline"><span id="player-current-time">00:00</span> / <span id="player-duration">00:00</span></span>
-                    <button class="zoom-btn" id="waveform-extras-toggle" onclick="toggleWaveformExtras()" title="Show/hide zoom &amp; marker controls" style="width:auto;padding:0 6px;font-size:11px;">▸</button>
-                    <div id="waveform-extras" style="display:none; align-items:center; gap:8px;">
-                        <div class="waveform-zoom-controls" title="Zoom waveform (scroll wheel on waveform also works)">
-                            <button class="zoom-btn" id="zoom-out-btn" onclick="zoomWaveform(1/1.5)" title="Zoom out">−</button>
-                            <span class="zoom-level-display" id="zoom-level-display">1.0x</span>
-                            <button class="zoom-btn" id="zoom-in-btn" onclick="zoomWaveform(1.5)" title="Zoom in">+</button>
-                            <button class="zoom-btn" id="zoom-reset-btn" onclick="resetWaveformZoom()" title="Reset zoom" style="width:auto;padding:0 6px;font-size:10px;">1:1</button>
-                            <button class="zoom-btn" id="wave-db-btn" onclick="toggleWaveformDb()" title="Amplitude scale" style="width:auto;padding:0 6px;font-size:10px;margin-left:4px;">Lin</button>
-                        </div>
-                        <div style="position: relative;">
-                            <button class="marker-visibility-btn" id="marker-visibility-btn" onclick="toggleMarkerVisibilityMenu(event)" title="Choose which marker lines to display">
-                                <span id="marker-visibility-label">Markers</span> ▾
-                            </button>
-                            <div class="marker-visibility-menu" id="marker-visibility-menu"></div>
-                        </div>
-                    </div>
-                    <button class="marker-quick-btn-inline" onclick="dropMarkerAtPlayhead()" title="Drop marker (M)">M</button>
-                </div>
-                <div class="player-info-row">
-                    <span class="tool-name-display" id="tool-name-display" title="Current edit tool (G = Grabber, S = Selector)">Grabber</span>
-                    <span class="player-filename-inline" id="player-filename"></span>
-                    <span class="wave-sel-info" id="wave-sel-info" style="display:none;">
-                        <span id="wave-sel-text"></span>
-                        <button class="sel-btn" onclick="createMarkerFromSelection()" title="Create a marker from the selection (M)">+ Marker</button>
-                        <button class="sel-btn" onclick="playSelection()" title="Play selection (Space)">▶</button>
-                        <button class="sel-btn" onclick="zoomToSelection()" title="Zoom to selection">Zoom</button>
-                        <button class="sel-btn" onclick="clearWaveSelection()" title="Clear selection (Esc)">×</button>
-                    </span>
-                    <span class="audio-info" id="audio-info"></span>
-                </div>
-                <div class="player-resize-handle" onmousedown="startPlayerResize(event)" title="Drag to resize waveform"></div>
             </div>
             <div class="panel-content" id="files-list">
                 <div class="empty-state">No files imported</div>
@@ -1906,18 +1956,16 @@ HTML_TEMPLATE = '''
             </div>
         </div>
         
-        <!-- Resize handle between center and right -->
-        <div class="panel-resize-handle" id="resize-right" onmousedown="startResize(event, 'right')"></div>
-        
+
         <!-- Right Panel: Metadata -->
         <div class="panel panel-right" id="panel-right">
             <div class="panel-header">
                 <span id="selected-file-name">No file selected</span>
                 <button id="file-stats-btn" class="btn btn-secondary" onclick="showFileStats()" style="display:none; font-size:11px; padding:2px 8px;">Stats</button>
             </div>
-            <div style="padding: 8px; border-bottom: 1px solid #475569;">
+            <div style="padding: 8px; border-bottom: 1px solid var(--rule-soft);">
                 <input type="text" id="content-search" placeholder="Search content... (⌘⇧L)" 
-                    style="width: 100%; background: #475569; border: 1px solid #64748b; color: #e2e8f0; padding: 6px; border-radius: 4px; font-size: 13px;">
+                    style="width: 100%; background: var(--calce); border: 1px solid var(--rule-soft); color: var(--inchiostro); padding: 6px; border-radius: 4px; font-size: 13px;">
             </div>
             <div class="panel-content" id="metadata-panel">
                 <div class="empty-state">Select a file to edit metadata</div>
@@ -2091,20 +2139,21 @@ HTML_TEMPLATE = '''
         let playerStartY = 0;
         let playerStartHeight = 0;
         
-        function startResize(e, type) {
+        // Resizing between two neighbouring panels. The flexible panel (Files,
+        // or whichever takes the spare room) never gets a fixed width; the
+        // other one of the pair is resized instead.
+        var resizePrev = null, resizeNext = null, resizeHandleEl = null;
+        function startResize(e, prevPanel, nextPanel, handle) {
             isResizing = true;
-            resizeType = type;
+            resizePrev = prevPanel;
+            resizeNext = nextPanel;
+            resizeHandleEl = handle;
             startX = e.clientX;
-            
-            const leftPanel = document.getElementById('panel-left');
-            const rightPanel = document.getElementById('panel-right');
-            startLeftWidth = leftPanel.offsetWidth;
-            startRightWidth = rightPanel.offsetWidth;
-            
-            document.getElementById('resize-' + type).classList.add('dragging');
+            startLeftWidth = prevPanel.offsetWidth;
+            startRightWidth = nextPanel.offsetWidth;
+            handle.classList.add('dragging');
             document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none';
-            
             e.preventDefault();
         }
         
@@ -2122,17 +2171,15 @@ HTML_TEMPLATE = '''
             
             if (isResizing) {
                 const dx = e.clientX - startX;
-                const leftPanel = document.getElementById('panel-left');
-                const rightPanel = document.getElementById('panel-right');
-                
-                if (resizeType === 'left') {
-                    const newWidth = Math.max(150, Math.min(500, startLeftWidth + dx));
-                    leftPanel.style.width = newWidth + 'px';
-                    leftPanel.style.flex = 'none';
-                } else if (resizeType === 'right') {
-                    const newWidth = Math.max(200, Math.min(600, startRightWidth - dx));
-                    rightPanel.style.width = newWidth + 'px';
-                    rightPanel.style.flex = 'none';
+                var maxW = Math.max(300, window.innerWidth - 360);
+                if (resizePrev.classList.contains('is-flex')) {
+                    var w = Math.max(160, Math.min(maxW, startRightWidth - dx));
+                    resizeNext.style.width = w + 'px';
+                    uiLayout.widths[resizeNext.id] = w;
+                } else {
+                    var w2 = Math.max(160, Math.min(maxW, startLeftWidth + dx));
+                    resizePrev.style.width = w2 + 'px';
+                    uiLayout.widths[resizePrev.id] = w2;
                 }
             }
             
@@ -2157,11 +2204,12 @@ HTML_TEMPLATE = '''
         document.addEventListener('mouseup', function() {
             if (isResizing) {
                 isResizing = false;
-                document.getElementById('resize-' + resizeType).classList.remove('dragging');
+                if (resizeHandleEl) resizeHandleEl.classList.remove('dragging');
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
                 resizeType = null;
-                
+                saveLayout();
+
                 // Redraw waveform after panel resize
                 if (currentWaveformPeaks) {
                     setTimeout(() => {
@@ -2175,6 +2223,8 @@ HTML_TEMPLATE = '''
             // Handle player bar height resize
             if (isResizingPlayer) {
                 isResizingPlayer = false;
+                uiLayout.waveHeight = document.getElementById('player-progress-container').offsetHeight;
+                saveLayout();
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
                 
@@ -2188,6 +2238,314 @@ HTML_TEMPLATE = '''
             }
         });
         
+        // ---- Display: waveform, spectrogram, or both (stacked, spectrogram on top) ----
+        function displayLanes(container) {
+            var d = (typeof uiLayout !== 'undefined' && uiLayout.display) ? uiLayout.display : { wave: true, spec: false };
+            var h = container.offsetHeight;
+            if (d.wave && d.spec) {
+                var specH = Math.round(h * 0.5);
+                return { specTop: 0, specH: specH, waveTop: specH, waveH: h - specH };
+            }
+            if (d.spec) return { specTop: 0, specH: h, waveTop: 0, waveH: h };
+            return { specTop: 0, specH: 0, waveTop: 0, waveH: h };
+        }
+
+        function applyDisplayClasses() {
+            var d = uiLayout.display;
+            var c = document.getElementById('player-progress-container');
+            if (c) {
+                c.classList.toggle('disp-wave', !!d.wave);
+                c.classList.toggle('disp-spec', !!d.spec);
+            }
+            var wb = document.getElementById('disp-wave-btn');
+            var sb = document.getElementById('disp-spec-btn');
+            if (wb) wb.classList.toggle('active', !!d.wave);
+            if (sb) sb.classList.toggle('active', !!d.spec);
+        }
+
+        function toggleDisplay(which) {
+            var d = uiLayout.display;
+            var other = which === 'wave' ? 'spec' : 'wave';
+            if (d[which] && !d[other]) return;            // keep at least one view on
+            d[which] = !d[which];
+            // Two lanes need room: give the strip a sensible height the first time.
+            if (d.wave && d.spec && uiLayout.waveHeight < 240) {
+                uiLayout.waveHeight = 280;
+                document.getElementById('player-progress-container').style.height = '280px';
+            }
+            saveLayout();
+            applyDisplayClasses();
+            redrawWaveSoon();
+        }
+
+        var spectroState = { fileId: null, data: null, img: null, pending: false, timer: null, seq: 0, error: null };
+
+        // Amber display-glass colour ramp: dark glass -> amber -> pale phosphor
+        var SPECTRO_LUT = (function () {
+            var stops = [[0, 18, 22, 19], [0.35, 70, 46, 14], [0.62, 176, 112, 32], [0.82, 240, 168, 58], [1, 255, 240, 205]];
+            var lut = new Uint8ClampedArray(256 * 3);
+            for (var i = 0; i < 256; i++) {
+                var t = i / 255, k = 0;
+                while (k < stops.length - 2 && t > stops[k + 1][0]) k++;
+                var a = stops[k], b = stops[k + 1], u = (t - a[0]) / (b[0] - a[0]);
+                for (var ch = 0; ch < 3; ch++) lut[i * 3 + ch] = a[ch + 1] + (b[ch + 1] - a[ch + 1]) * u;
+            }
+            return lut;
+        })();
+
+        function spectroToImage(res) {
+            var bin = atob(res.data), cols = res.cols, rows = res.rows;
+            var off = document.createElement('canvas');
+            off.width = cols; off.height = rows;
+            var octx = off.getContext('2d');
+            var im = octx.createImageData(cols, rows);
+            var px = im.data;
+            for (var c = 0; c < cols; c++) {
+                for (var r = 0; r < rows; r++) {
+                    var v = bin.charCodeAt(c * rows + r);
+                    var o = ((rows - 1 - r) * cols + c) * 4;      // high frequencies at the top
+                    px[o] = SPECTRO_LUT[v * 3]; px[o + 1] = SPECTRO_LUT[v * 3 + 1]; px[o + 2] = SPECTRO_LUT[v * 3 + 2]; px[o + 3] = 255;
+                }
+            }
+            octx.putImageData(im, 0, 0);
+            return off;
+        }
+
+        // Ask for exactly the device pixels of the lane (Retina included).
+        function requestSpectro(viewStart, viewEnd, devW, devH) {
+            var cols = Math.max(64, Math.min(4096, Math.round(devW)));
+            var rows = Math.max(64, Math.min(1024, Math.round(devH)));
+            var reqKey = currentWaveformFileId + '|' + viewStart.toFixed(6) + '|' + viewEnd.toFixed(6) + '|' + cols + '|' + rows;
+            if (reqKey === spectroState.lastReq) return;      // already asked for exactly this
+            if (spectroState.timer) clearTimeout(spectroState.timer);
+            spectroState.timer = setTimeout(function () {
+                spectroState.timer = null;
+                var fid = currentWaveformFileId;
+                if (!fid) return;
+                spectroState.lastReq = reqKey;
+                var seq = ++spectroState.seq;
+                fetch('/api/audio/' + fid + '/spectrogram?cols=' + cols + '&rows=' + rows + '&start=' + viewStart + '&end=' + viewEnd)
+                    .then(function (r) { return r.json(); })
+                    .then(function (res) {
+                        if (seq !== spectroState.seq || fid !== currentWaveformFileId) return;
+                        if (res.error) { spectroState.error = res.error; spectroState.data = null; spectroState.img = null; }
+                        else { spectroState.error = null; spectroState.data = res; spectroState.img = spectroToImage(res); }
+                        drawSpectrogram();
+                    })
+                    .catch(function () {});
+            }, 120);
+        }
+
+        function drawSpectrogram() {
+            var canvas = document.getElementById('spectro-canvas');
+            if (!canvas) return;
+            var d = uiLayout.display;
+            if (!d.spec) return;
+            if (spectroState.fileId !== currentWaveformFileId) {
+                spectroState.fileId = currentWaveformFileId;
+                spectroState.data = null; spectroState.img = null; spectroState.error = null; spectroState.lastReq = null;
+            }
+            var container = canvas.parentElement;
+            var lane = displayLanes(container);
+            var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+            var cssW = container.offsetWidth;
+            var W = Math.max(1, Math.round(cssW * dpr));
+            var H = Math.max(1, Math.round(lane.specH * dpr));
+            canvas.width = W; canvas.height = H;
+            canvas.style.width = cssW + 'px';
+            canvas.style.height = lane.specH + 'px';
+            canvas.style.top = lane.specTop + 'px';
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#121613';
+            ctx.fillRect(0, 0, W, H);
+            if (!currentWaveformFileId) return;
+
+            var viewStart = waveformOffset, viewEnd = Math.min(1, waveformOffset + 1 / waveformZoom);
+            var res = spectroState.data;
+            if (res && spectroState.img) {
+                var span = res.window[1] - res.window[0];
+                var sx = (viewStart - res.window[0]) / span * res.cols;
+                var sw = (viewEnd - viewStart) / span * res.cols;
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(spectroState.img, sx, 0, sw, res.rows, 0, 0, W, H);
+                // Frequency labels on the glass
+                ctx.font = (9 * dpr) + 'px "B612 Mono", Menlo, monospace';
+                ctx.fillStyle = 'rgba(184, 132, 51, 0.9)';
+                var marks = [100, 1000, 10000];
+                for (var i = 0; i < marks.length; i++) {
+                    var f = marks[i];
+                    if (f <= res.fmin || f >= res.fmax) continue;
+                    var y = H - (Math.log(f / res.fmin) / Math.log(res.fmax / res.fmin)) * H;
+                    if (y < 12 * dpr || y > H - 4 * dpr) continue;    // too close to an edge to read
+                    ctx.fillRect(0, y, 5 * dpr, 1);
+                    ctx.fillText(f >= 1000 ? (f / 1000) + 'k' : String(f), 7 * dpr, y + 3 * dpr);
+                }
+                var covers = viewStart >= res.window[0] - 1e-9 && viewEnd <= res.window[1] + 1e-9;
+                var sharp = sw >= Math.min(4096, W) * 0.9 && res.rows >= Math.min(1024, H) * 0.9;
+                if (!covers || !sharp) requestSpectro(viewStart, viewEnd, W, H);
+            } else if (spectroState.error) {
+                ctx.font = (11 * dpr) + 'px "Archivo", sans-serif';
+                ctx.fillStyle = 'rgba(184, 132, 51, 0.9)';
+                ctx.fillText(spectroState.error, 10 * dpr, 18 * dpr);
+            } else {
+                requestSpectro(viewStart, viewEnd, W, H);
+            }
+        }
+
+        // Every waveform redraw (zoom, scroll, resize, new file) also redraws the spectrogram.
+        var _drawWaveformOnly = drawWaveform;
+        drawWaveform = function (peaks) {
+            _drawWaveformOnly(peaks);
+            drawSpectrogram();
+        };
+
+        // ---- Layout: which panels show, their order and sizes (remembered) ----
+        var VIEW_IDS = { wave: 'wave-strip', fields: 'panel-left', files: 'panel-center', info: 'panel-right' };
+        var uiLayout = {
+            show: { wave: true, fields: true, files: true, info: true },
+            order: ['panel-left', 'panel-center', 'panel-right'],
+            widths: {},
+            waveHeight: 180,
+            display: { wave: true, spec: false }
+        };
+        (function loadLayout() {
+            try {
+                var saved = JSON.parse(localStorage.getItem('earmark_layout') || 'null');
+                if (saved) {
+                    if (saved.show) for (var k in uiLayout.show) if (typeof saved.show[k] === 'boolean') uiLayout.show[k] = saved.show[k];
+                    if (saved.order && saved.order.length === 3) {
+                        var ok = uiLayout.order.every(function (id) { return saved.order.indexOf(id) !== -1; });
+                        if (ok) uiLayout.order = saved.order;
+                    }
+                    if (saved.widths) uiLayout.widths = saved.widths;
+                    if (saved.waveHeight) uiLayout.waveHeight = saved.waveHeight;
+                    if (saved.display && (saved.display.wave || saved.display.spec)) {
+                        uiLayout.display = { wave: !!saved.display.wave, spec: !!saved.display.spec };
+                    }
+                }
+            } catch (e) {}
+        })();
+
+        function saveLayout() {
+            try { localStorage.setItem('earmark_layout', JSON.stringify(uiLayout)); } catch (e) {}
+        }
+
+        function redrawWaveSoon() {
+            var hasWave = false;
+            try { hasWave = !!currentWaveformPeaks; } catch (e) { hasWave = false; }  // not declared yet on first layout
+            if (hasWave) {
+                setTimeout(function () {
+                    drawWaveform(currentWaveformPeaks);
+                    updatePlayerMarkers();
+                    updatePlayheadPosition();
+                }, 30);
+            }
+        }
+
+        function layoutPanels() {
+            var main = document.getElementById('main-container');
+            var handles = main.querySelectorAll('.panel-resize-handle');
+            for (var h = 0; h < handles.length; h++) handles[h].parentNode.removeChild(handles[h]);
+
+            var visible = [];
+            for (var i = 0; i < uiLayout.order.length; i++) {
+                var panel = document.getElementById(uiLayout.order[i]);
+                main.appendChild(panel);              // re-append in the saved order
+                var key = null;
+                for (var v in VIEW_IDS) if (VIEW_IDS[v] === panel.id) key = v;
+                var on = uiLayout.show[key] !== false;
+                panel.classList.toggle('is-hidden', !on);
+                panel.classList.remove('is-flex');
+                if (on) visible.push(panel);
+            }
+            // One panel takes the spare room: Files if shown, otherwise the widest visible one
+            var flex = null;
+            var files = document.getElementById('panel-center');
+            if (visible.indexOf(files) !== -1) flex = files;
+            else if (visible.length) flex = visible[visible.length - 1];
+            for (var j = 0; j < visible.length; j++) {
+                var pnl = visible[j];
+                if (pnl === flex) {
+                    pnl.classList.add('is-flex');
+                    pnl.style.width = '';
+                } else {
+                    var w = uiLayout.widths[pnl.id];
+                    pnl.style.width = (w ? w : (pnl.id === 'panel-right' ? 300 : 250)) + 'px';
+                }
+                pnl.style.flex = '';
+                if (j > 0) {
+                    var handle = document.createElement('div');
+                    handle.className = 'panel-resize-handle';
+                    (function (prev, next, hd) {
+                        hd.onmousedown = function (e) { startResize(e, prev, next, hd); };
+                    })(visible[j - 1], pnl, handle);
+                    main.insertBefore(handle, pnl);
+                }
+            }
+            document.getElementById('main-container').classList.toggle('is-empty', visible.length === 0);
+            document.getElementById('wave-strip').classList.toggle('is-hidden', !uiLayout.show.wave);
+            document.getElementById('player-progress-container').style.height = uiLayout.waveHeight + 'px';
+            for (var key2 in VIEW_IDS) {
+                var btn = document.getElementById('view-key-' + key2);
+                if (btn) btn.classList.toggle('active', uiLayout.show[key2] !== false);
+            }
+            redrawWaveSoon();
+        }
+
+        function toggleView(key) {
+            uiLayout.show[key] = !(uiLayout.show[key] !== false);
+            saveLayout();
+            layoutPanels();
+        }
+
+        // Drag a panel's title bar onto another panel to swap their places.
+        var panelDrag = null;
+        document.addEventListener('mousedown', function (e) {
+            var bar = e.target.closest ? e.target.closest('#main-container > .panel > .panel-header') : null;
+            if (!bar || e.button !== 0) return;
+            if (e.target.closest('button, input, select, a, [contenteditable="true"]')) return;
+            panelDrag = { panel: bar.parentNode, x: e.clientX, y: e.clientY, active: false, target: null };
+        });
+        document.addEventListener('mousemove', function (e) {
+            if (!panelDrag) return;
+            if (!panelDrag.active) {
+                if (Math.abs(e.clientX - panelDrag.x) + Math.abs(e.clientY - panelDrag.y) < 6) return;
+                panelDrag.active = true;
+                panelDrag.panel.classList.add('is-dragging');
+                document.body.style.cursor = 'grabbing';
+                document.body.style.userSelect = 'none';
+            }
+            var el = document.elementFromPoint(e.clientX, e.clientY);
+            var over = el && el.closest ? el.closest('#main-container > .panel') : null;
+            if (over === panelDrag.panel) over = null;
+            if (panelDrag.target && panelDrag.target !== over) panelDrag.target.classList.remove('is-drop-target');
+            panelDrag.target = over;
+            if (over) over.classList.add('is-drop-target');
+        });
+        document.addEventListener('mouseup', function () {
+            if (!panelDrag) return;
+            var d = panelDrag;
+            panelDrag = null;
+            if (!d.active) return;
+            d.panel.classList.remove('is-dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            if (d.target) {
+                d.target.classList.remove('is-drop-target');
+                var a = uiLayout.order.indexOf(d.panel.id), b = uiLayout.order.indexOf(d.target.id);
+                if (a !== -1 && b !== -1) {
+                    uiLayout.order[a] = d.target.id;
+                    uiLayout.order[b] = d.panel.id;
+                    saveLayout();
+                    layoutPanels();
+                }
+            }
+        });
+
+        layoutPanels();
+        applyDisplayClasses();
+
         // Change marker color
         function changeMarkerColor(fieldId, markerIndex, newColor) {
             fetch('/api/file/' + selectedFileId)
@@ -2354,7 +2712,7 @@ HTML_TEMPLATE = '''
                     if (!marker) return;
                     
                     const currentVal = which === 'start' ? marker.start : marker.end;
-                    const newVal = prompt(`Edit ${which} time (HH:MM:SS or HH:MM:SS.mmm):`, currentVal);
+                    qdPrompt(`Edit ${which} time (HH:MM:SS or HH:MM:SS.mmm):`, currentVal, {title: 'Marker time', ok: 'Set', mono: true}).then(newVal => {
                     
                     if (newVal === null) return;
                     
@@ -2376,6 +2734,7 @@ HTML_TEMPLATE = '''
                         updatePlayerMarkers();
                         loadFileMetadata(selectedFileId);
                     });
+                    });
                 });
         }
         
@@ -2393,7 +2752,7 @@ HTML_TEMPLATE = '''
                     const marker = markers[markerIndex];
                     if (!marker) return;
                     
-                    const newLabel = prompt('Edit marker label:', marker.label);
+                    qdPrompt('Marker label:', marker.label, {title: 'Edit marker', ok: 'Save'}).then(newLabel => {
                     
                     if (newLabel === null || newLabel.trim() === '') return;
                     
@@ -2408,6 +2767,7 @@ HTML_TEMPLATE = '''
                         if (markerFieldsState[fieldId]) markerFieldsState[fieldId].markers = markers;
                         updatePlayerMarkers();
                         loadFileMetadata(selectedFileId);
+                    });
                     });
                 });
         }
@@ -2424,7 +2784,7 @@ HTML_TEMPLATE = '''
         function updateRecentDatabases() {
             const container = document.getElementById('recent-databases');
             if (recentDatabases.length === 0) {
-                container.innerHTML = '<div class="dropdown-item" style="color: #64748b; font-style: italic;">No recent databases</div>';
+                container.innerHTML = '<div class="dropdown-item" style="color: var(--grafite); font-style: italic;">No recent databases</div>';
             } else {
                 container.innerHTML = recentDatabases.slice(0, 5).map(db => 
                     `<div class="dropdown-item" onclick="openDatabasePath('${db.replace(/'/g, "\\'")}')">${db.split('/').pop()}</div>`
@@ -2461,7 +2821,7 @@ HTML_TEMPLATE = '''
         });
         
         function newDatabase() {
-            const name = prompt('New database name:', 'new_project.db');
+            qdPrompt('Name of the new database. It is created in your Earmark folder (Documents/Earmark).', 'new_project.db', {title: 'New database', ok: 'Create', mono: true}).then(name => {
             if (!name) return;
             
             const dbName = name.endsWith('.db') ? name : name + '.db';
@@ -2489,23 +2849,26 @@ HTML_TEMPLATE = '''
                     
                     // Hide player bar
                     document.getElementById('player-bar').classList.remove('visible');
+                    document.getElementById('wave-strip').classList.remove('has-audio');
                     document.getElementById('selected-file-name').textContent = 'No file selected';
                     document.getElementById('metadata-panel').innerHTML = '<div class="empty-state">Select a file to edit metadata</div>';
                     
                     loadFields();
                     loadFiles();
                     document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
-                    alert('Created new database: ' + dbName);
+                    qdNotice('Created new database: ' + dbName);
                 } else {
                     alert('Error: ' + data.error);
                 }
             });
+            });
         }
         
         function openDatabase() {
-            const path = prompt('Enter database path (or filename in current directory):');
+            qdPrompt('Database file: a full path, or just a name for one in Documents/Earmark.', '', {title: 'Open database', ok: 'Open', mono: true, placeholder: 'archive.db  or  /Users/…/archive.db'}).then(path => {
             if (!path) return;
             openDatabasePath(path);
+            });
         }
         
         function openDatabasePath(path) {
@@ -2532,6 +2895,7 @@ HTML_TEMPLATE = '''
                     
                     // Hide player bar
                     document.getElementById('player-bar').classList.remove('visible');
+                    document.getElementById('wave-strip').classList.remove('has-audio');
                     document.getElementById('selected-file-name').textContent = 'No file selected';
                     document.getElementById('metadata-panel').innerHTML = '<div class="empty-state">Select a file to edit metadata</div>';
                     
@@ -2545,7 +2909,7 @@ HTML_TEMPLATE = '''
         }
         
         function saveDatabaseAs() {
-            const name = prompt('Save database as:', currentDbPath.split('/').pop());
+            qdPrompt('Save a copy of this database as:', currentDbPath.split('/').pop(), {title: 'Save database as', ok: 'Save', mono: true}).then(name => {
             if (!name) return;
             
             const dbName = name.endsWith('.db') ? name : name + '.db';
@@ -2560,10 +2924,11 @@ HTML_TEMPLATE = '''
                     currentDbPath = data.path;
                     addToRecent(data.path);
                     updateDbDisplay();
-                    alert('Saved as: ' + dbName);
+                    qdNotice('Saved as: ' + dbName);
                 } else {
                     alert('Error: ' + data.error);
                 }
+            });
             });
         }
         
@@ -2588,52 +2953,6 @@ HTML_TEMPLATE = '''
                 .catch(err => alert('Could not export to Excel: ' + err.message));
         }
 
-        // Markers -> MIDI file(s) that Pro Tools imports onto its Markers ruler.
-        // Acts on the checked files, or the selected / playing file if none are checked.
-        function exportMarkersMidi() {
-            document.querySelectorAll('.dropdown-menu').forEach(function (m) { m.classList.remove('show'); });
-            var ids = [];
-            if (selectedFileIds.size > 0) ids = Array.from(selectedFileIds);
-            else if (selectedFileId) ids = [selectedFileId];
-            else if (currentPlayingId) ids = [currentPlayingId];
-            if (!ids.length) { alert('Select a file (or check several) first.'); return; }
-
-            var mFields = allFields.filter(function (f) { return f.type === 'markers'; });
-            if (!mFields.length) { alert('There is no markers field in this database.'); return; }
-            var fieldId = null;
-            if (mFields.length > 1) {
-                var names = mFields.map(function (f) { return '- ' + f.name; }).join('\\n');
-                var pick = prompt('Which markers field to export?\\n' + names + '\\n\\nLeave blank to export all of them.', '');
-                if (pick === null) return;
-                pick = pick.trim().toLowerCase();
-                if (pick) {
-                    var hit = mFields.filter(function (f) { return f.name.toLowerCase() === pick; })[0];
-                    if (!hit) { alert('No markers field called "' + pick + '".'); return; }
-                    fieldId = hit.id;
-                }
-            }
-            var includeEnds = confirm('Also add a marker at the END of each region?\\n\\nOK = start + end markers\\nCancel = start markers only');
-
-            fetch('/api/export/midi-markers', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({file_ids: ids, field_id: fieldId, include_ends: includeEnds})
-            }).then(function (r) { return r.json(); }).then(function (res) {
-                if (!res.success) {
-                    var why = res.error || ((res.skipped && res.skipped.length) ? 'No markers on the selected file(s).' : 'Could not write the file(s).');
-                    alert('Marker export failed: ' + why);
-                    return;
-                }
-                var msg = 'Wrote ' + res.written.length + ' MIDI marker file(s):\\n';
-                res.written.slice(0, 8).forEach(function (w) { msg += '\\n' + w.path + '  (' + w.count + ' markers)'; });
-                if (res.written.length > 8) msg += '\\n…';
-                if (res.skipped && res.skipped.length) msg += '\\n\\nNo markers: ' + res.skipped.length + ' file(s) skipped.';
-                if (res.errors && res.errors.length) msg += '\\nCould not write: ' + res.errors.join(', ');
-                msg += '\\n\\nIn Pro Tools: File > Import > MIDI…, Location: Session Start, tick "Import tempo map from MIDI file". Markers land on the Markers ruler.';
-                alert(msg);
-            }).catch(function (err) { alert('Marker export failed: ' + err.message); });
-        }
-
         // Playback speed
         function changePlaybackSpeed(speed) {
             audioPlayer.playbackRate = parseFloat(speed);
@@ -2652,8 +2971,8 @@ HTML_TEMPLATE = '''
         function toggleTheme() {
             const html = document.documentElement;
             const current = html.getAttribute('data-theme');
-            const newTheme = current === 'light' ? 'dark' : 'light';
-            html.setAttribute('data-theme', newTheme === 'light' ? 'light' : '');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
             // Button label shows the *opposite* mode (the one a click would switch to).
             document.getElementById('theme-btn').textContent = newTheme === 'light' ? 'Dark' : 'Light';
             localStorage.setItem('earmark-theme', newTheme);
@@ -2666,8 +2985,12 @@ HTML_TEMPLATE = '''
         
         // Restore saved theme
         (function() {
-            const saved = localStorage.getItem('earmark-theme');
-            if (saved === 'light') {
+            var saved = null;
+            try { saved = localStorage.getItem('earmark-theme'); } catch (e) {}
+            if (saved === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.getElementById('theme-btn').textContent = 'Light';
+            } else {
                 document.documentElement.setAttribute('data-theme', 'light');
                 document.getElementById('theme-btn').textContent = 'Dark';
             }
@@ -2814,12 +3137,14 @@ HTML_TEMPLATE = '''
 
             var container = canvas.parentElement;
             var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+            var lane = displayLanes(container);
             var W = Math.max(1, Math.round(container.offsetWidth * dpr));
-            var H = Math.max(1, Math.round(container.offsetHeight * dpr));
+            var H = Math.max(1, Math.round(lane.waveH * dpr));
             canvas.width = W;
             canvas.height = H;
             canvas.style.width = container.offsetWidth + 'px';
-            canvas.style.height = container.offsetHeight + 'px';
+            canvas.style.height = lane.waveH + 'px';
+            canvas.style.top = lane.waveTop + 'px';
 
             // If the canvas changed width, fetch data at the new resolution.
             if (waveformLastCanvasW && Math.abs(W - waveformLastCanvasW) > 4 && currentWaveformData) {
@@ -2831,14 +3156,21 @@ HTML_TEMPLATE = '''
             ctx.clearRect(0, 0, W, H);
 
             var isLight = document.documentElement.getAttribute('data-theme') === 'light';
-            var peakColor  = isLight ? 'rgba(30, 41, 59, 0.40)'   : 'rgba(148, 197, 255, 0.50)';
-            var rmsColor   = isLight ? 'rgba(15, 23, 42, 0.80)'   : 'rgba(214, 234, 255, 0.90)';
-            var lineColor  = isLight ? 'rgba(15, 23, 42, 0.90)'   : 'rgba(186, 220, 255, 0.95)';
-            var centerLine = isLight ? 'rgba(0,0,0,0.15)'         : 'rgba(255,255,255,0.12)';
-            var gridLine   = isLight ? 'rgba(0,0,0,0.06)'         : 'rgba(255,255,255,0.05)';
-            var laneSep    = isLight ? 'rgba(0,0,0,0.20)'         : 'rgba(0,0,0,0.45)';
-            var labelColor = isLight ? 'rgba(15,23,42,0.55)'      : 'rgba(226,232,240,0.45)';
-            var clipColor  = '#ef4444';
+            // Colours come from the theme's CSS variables (ui/quadro.css),
+            // with the old values as fallbacks if the stylesheet is missing.
+            var themeCss = getComputedStyle(document.documentElement);
+            function themeColor(name, fallback) {
+                var v = themeCss.getPropertyValue(name).trim();
+                return v || fallback;
+            }
+            var peakColor  = themeColor('--wave-peak',   isLight ? 'rgba(30, 41, 59, 0.40)' : 'rgba(148, 197, 255, 0.50)');
+            var rmsColor   = themeColor('--wave-rms',    isLight ? 'rgba(15, 23, 42, 0.80)' : 'rgba(214, 234, 255, 0.90)');
+            var lineColor  = themeColor('--wave-line',   isLight ? 'rgba(15, 23, 42, 0.90)' : 'rgba(186, 220, 255, 0.95)');
+            var centerLine = themeColor('--wave-center', isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.12)');
+            var gridLine   = themeColor('--wave-grid',   isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)');
+            var laneSep    = themeColor('--wave-lane',   isLight ? 'rgba(0,0,0,0.20)' : 'rgba(0,0,0,0.45)');
+            var labelColor = themeColor('--wave-label',  isLight ? 'rgba(15,23,42,0.55)' : 'rgba(226,232,240,0.45)');
+            var clipColor  = themeColor('--wave-clip',   '#ef4444');
 
             clampWaveformOffset();
 
@@ -3156,14 +3488,17 @@ HTML_TEMPLATE = '''
                 
                 if (hasFolder) {
                     const folderPath = Array.from(paths)[0];
-                    const recursive = paths.size > 1 || confirm('Include subfolders?');
-                    fetch('/api/import', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({path: folderPath, recursive})
-                    }).then(r => r.json()).then(result => {
-                        alert('Imported ' + result.imported + ' file(s)');
-                        loadFiles();
+                    const ask = paths.size > 1 ? Promise.resolve(true)
+                        : qdConfirm('Also import audio from subfolders of ' + folderPath + '?', {title: 'Import audio', ok: 'Include subfolders', cancel: 'This folder only'});
+                    ask.then(recursive => {
+                        fetch('/api/import', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({path: folderPath, recursive})
+                        }).then(r => r.json()).then(result => {
+                            qdNotice('Imported ' + result.imported + ' file(s)');
+                            loadFiles();
+                        });
                     });
                 } else {
                     // Fallback: ask for path (browser security limits direct folder access)
@@ -3177,220 +3512,419 @@ HTML_TEMPLATE = '''
         loadFiles();
         
         // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-            const cmdKey = isMac ? e.metaKey : e.ctrlKey;
-            
-            // Don't trigger shortcuts when typing in input fields
-            const isInputFocused = document.activeElement.tagName === 'INPUT' || 
-                                   document.activeElement.tagName === 'TEXTAREA' ||
-                                   document.activeElement.tagName === 'SELECT';
-            
-            // Cmd+Shift+O - Open database
-            if (cmdKey && e.shiftKey && e.key === 'O') {
-                e.preventDefault();
-                alert('Open database: Feature coming soon. Currently using single database mode.');
-                return;
+        // ---- Quadro dialogs: message, confirm, prompt and small forms ----
+        // qdDialog({title, message, fields, ok, cancel, danger, validate}) -> Promise
+        //   resolves to {name: value} (or true when there are no fields), or null if cancelled.
+        var qdQueue = [];
+        var qdOpen = false;
+        function qdDialog(opts) {
+            return new Promise(function (resolve) {
+                qdQueue.push({ opts: opts || {}, resolve: resolve });
+                if (!qdOpen) qdNext();
+            });
+        }
+        function qdNext() {
+            var job = qdQueue.shift();
+            if (!job) { qdOpen = false; return; }
+            qdOpen = true;
+            var o = job.opts, fields = o.fields || [];
+            var prevFocus = document.activeElement;
+            var overlay = document.createElement('div');
+            overlay.className = 'modal-overlay visible qd-generic';
+            var box = document.createElement('div');
+            box.className = 'modal qd-dialog';
+            box.setAttribute('role', o.cancel === null ? 'alertdialog' : 'dialog');
+            var bar = document.createElement('div');
+            bar.className = 'qd-dialog-bar';
+            var title = document.createElement('span');
+            title.textContent = o.title || 'Earmark';
+            bar.appendChild(title);
+            var body = document.createElement('div');
+            body.className = 'qd-dialog-body';
+            if (o.message) {
+                var msg = document.createElement('div');
+                msg.className = 'qd-message';
+                msg.textContent = o.message;
+                body.appendChild(msg);
             }
-            
-            // Cmd+Shift+W - Close database
-            if (cmdKey && e.shiftKey && e.key === 'W') {
-                e.preventDefault();
-                alert('Close database: Feature coming soon.');
-                return;
-            }
-            
-            // Cmd+S - Save
-            if (cmdKey && !e.shiftKey && e.key === 's') {
-                e.preventDefault();
-                saveProject();
-                return;
-            }
-            
-            // Cmd+Shift+I - Import
-            if (cmdKey && e.shiftKey && e.key === 'I') {
-                e.preventDefault();
-                importFiles();
-                return;
-            }
-            
-            // Cmd+Shift+J - Search fields
-            if (cmdKey && e.shiftKey && e.key === 'J') {
-                e.preventDefault();
-                document.getElementById('field-search').focus();
-                return;
-            }
-            
-            // Cmd+Shift+K - Search files
-            if (cmdKey && e.shiftKey && e.key === 'K') {
-                e.preventDefault();
-                document.getElementById('file-search').focus();
-                return;
-            }
-            
-            // Cmd+Shift+L - Search content
-            if (cmdKey && e.shiftKey && e.key === 'L') {
-                e.preventDefault();
-                document.getElementById('content-search').focus();
-                return;
-            }
-            
-            // Cmd+Shift+N - New field
-            if (cmdKey && e.shiftKey && e.key === 'N') {
-                e.preventDefault();
-                newField();
-                return;
-            }
-            
-            // Cmd+Z - Undo
-            if (cmdKey && !e.shiftKey && e.key === 'z') {
-                // Let browser handle default undo in input fields
-                if (!isInputFocused) {
-                    e.preventDefault();
-                    undo();
-                }
-                return;
-            }
-            
-            // Cmd+Shift+Z - Redo
-            if (cmdKey && e.shiftKey && e.key === 'Z') {
-                if (!isInputFocused) {
-                    e.preventDefault();
-                    redo();
-                }
-                return;
-            }
-            
-            // Only handle file navigation shortcuts when not in input
-            if (isInputFocused) return;
-            
-            // G / S (or F8 / F7 as in Pro Tools) - Grabber / Selector tool
-            if (!cmdKey && !e.altKey && !e.shiftKey && (e.key === 'g' || e.key === 'G' || e.key === 'F8')) {
-                e.preventDefault();
-                setWaveTool('grabber');
-                return;
-            }
-            if (!cmdKey && !e.altKey && !e.shiftKey && (e.key === 's' || e.key === 'S' || e.key === 'F7')) {
-                e.preventDefault();
-                setWaveTool('selector');
-                return;
-            }
-
-            // R / T - Zoom waveform in / out (anchored on the playhead)
-            if (!cmdKey && !e.shiftKey && !e.altKey && (e.key === 'r' || e.key === 'R')) {
-                e.preventDefault();
-                zoomWaveform(1.3);
-                return;
-            }
-            if (!cmdKey && !e.shiftKey && !e.altKey && (e.key === 't' || e.key === 'T')) {
-                e.preventDefault();
-                zoomWaveform(1 / 1.3);
-                return;
-            }
-
-            // Arrow Up/Down - Navigate files
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                navigateFiles(1);
-                return;
-            }
-            
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                navigateFiles(-1);
-                return;
-            }
-            
-            // Space - Play/Pause
-            if (e.key === ' ') {
-                e.preventDefault();
-                if (currentPlayingId) {
-                    togglePlayPause();
-                } else if (selectedFileId) {
-                    const file = allFiles.find(f => f.id === selectedFileId);
-                    if (file) playFile(file.id, file.filepath);
-                }
-                return;
-            }
-            
-            // M - Drop marker at playhead
-            if (e.key === 'm' || e.key === 'M') {
-                if (!cmdKey && !e.shiftKey) {
-                    e.preventDefault();
-                    // With a selection: marker spans the selection. Otherwise: at the playhead.
-                    if (waveSel && waveSel.end - waveSel.start > 0.0005) createMarkerFromSelection();
-                    else dropMarkerAtPlayhead();
+            var inputs = {};
+            fields.forEach(function (f, idx) {
+                var id = 'qd-f-' + idx;
+                if (f.type === 'check') {
+                    var row = document.createElement('label');
+                    row.className = 'qd-check';
+                    var cb = document.createElement('input');
+                    cb.type = 'checkbox'; cb.id = id; cb.checked = !!f.value;
+                    var t = document.createElement('span');
+                    t.textContent = f.label;
+                    row.appendChild(cb); row.appendChild(t);
+                    body.appendChild(row);
+                    inputs[f.name] = cb;
                     return;
                 }
-            }
-            
-            // Cmd+Shift+M - Jump to next marker
-            if (cmdKey && e.shiftKey && e.key === 'M') {
-                e.preventDefault();
-                jumpToNextMarker();
-                return;
-            }
-            
-            // Cmd+Shift+, - Jump to previous marker
-            if (cmdKey && e.shiftKey && e.key === '<') {
-                e.preventDefault();
-                jumpToPreviousMarker();
-                return;
-            }
-            
-            // Delete/Backspace - Delete selected
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                e.preventDefault();
-                if (selectedFileIds.size > 0) {
-                    batchDelete();
-                } else if (selectedFileId) {
-                    deleteFile(selectedFileId);
+                var lab = document.createElement('label');
+                lab.className = 'qd-label';
+                lab.setAttribute('for', id);
+                lab.textContent = f.label || '';
+                if (f.label) body.appendChild(lab);
+                var el;
+                if (f.type === 'select') {
+                    el = document.createElement('select');
+                    (f.options || []).forEach(function (opt) {
+                        var oe = document.createElement('option');
+                        oe.value = opt.value; oe.textContent = opt.label;
+                        el.appendChild(oe);
+                    });
+                    if (f.value != null) el.value = f.value;
+                } else {
+                    el = document.createElement('input');
+                    el.type = f.type === 'number' ? 'number' : 'text';
+                    el.value = f.value != null ? f.value : '';
+                    el.autocomplete = 'off';
+                    if (f.placeholder) el.placeholder = f.placeholder;
+                    if (f.mono) el.className = 'qd-mono';
                 }
-                return;
+                el.id = id;
+                body.appendChild(el);
+                inputs[f.name] = el;
+            });
+            var err = document.createElement('div');
+            err.className = 'nf-error';
+            body.appendChild(err);
+            var keys = document.createElement('div');
+            keys.className = 'qd-dialog-keys';
+            var cancelBtn = null;
+            if (o.cancel !== null) {
+                cancelBtn = document.createElement('button');
+                cancelBtn.className = 'btn btn-secondary';
+                cancelBtn.textContent = o.cancel || 'Cancel';
+                keys.appendChild(cancelBtn);
             }
-            
-            // Cmd+A - Select all
-            if (cmdKey && e.key === 'a') {
-                e.preventDefault();
-                selectAllFiles();
-                return;
-            }
+            var okBtn = document.createElement('button');
+            okBtn.className = 'btn' + (o.danger ? ' qd-commit' : ' qd-ok');
+            okBtn.textContent = o.ok || 'OK';
+            keys.appendChild(okBtn);
+            box.appendChild(bar); box.appendChild(body); box.appendChild(keys);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
 
-            // Cmd+D - Deselect all
-            if (cmdKey && e.key === 'd') {
-                e.preventDefault();
-                deselectAllFiles();
-                return;
+            function values() {
+                var v = {};
+                fields.forEach(function (f) {
+                    var el = inputs[f.name];
+                    v[f.name] = f.type === 'check' ? el.checked : el.value;
+                });
+                return v;
             }
+            function finish(result) {
+                overlay.parentNode && overlay.parentNode.removeChild(overlay);
+                if (prevFocus && prevFocus.focus && prevFocus.isConnected) { try { prevFocus.focus(); } catch (e) {} }
+                job.resolve(result);
+                qdNext();
+            }
+            function confirmIt() {
+                var v = values();
+                if (o.validate) {
+                    var problem = o.validate(v);
+                    if (problem) { err.textContent = problem; err.style.display = 'block'; return; }
+                }
+                finish(fields.length ? v : true);
+            }
+            function cancelIt() { finish(o.cancel === null ? true : null); }
+            body.addEventListener('input', function () { err.style.display = 'none'; });
+            okBtn.addEventListener('click', confirmIt);
+            if (cancelBtn) cancelBtn.addEventListener('click', cancelIt);
+            overlay.addEventListener('mousedown', function (e) { if (e.target === overlay && o.cancel !== null) cancelIt(); });
+            overlay.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') { e.preventDefault(); cancelIt(); }
+                else if (e.key === 'Enter' && !(e.target && e.target.classList && e.target.classList.contains('btn-secondary'))) { e.preventDefault(); confirmIt(); }
+                e.stopPropagation();                      // no app shortcuts while a dialog is open
+            });
+            var first = null;
+            for (var k in inputs) { if (inputs[k].type !== 'checkbox') { first = inputs[k]; break; } }
+            setTimeout(function () {
+                if (first && first.tagName === 'INPUT') { first.focus(); first.select(); }
+                else if (first && first._qsel) first._qsel.btn.focus();
+                else okBtn.focus();
+            }, 0);
+        }
+        function qdAlert(message, opts) {
+            opts = opts || {};
+            return qdDialog({ title: opts.title || 'Earmark', message: String(message), ok: 'OK', cancel: null });
+        }
+        function qdConfirm(message, opts) {
+            opts = opts || {};
+            return qdDialog({ title: opts.title || 'Earmark', message: message, ok: opts.ok || 'OK', cancel: opts.cancel || 'Cancel', danger: !!opts.danger })
+                .then(function (r) { return r !== null; });
+        }
+        function qdPrompt(message, def, opts) {
+            opts = opts || {};
+            return qdDialog({ title: opts.title || 'Earmark', message: message, ok: opts.ok || 'OK',
+                              fields: [{ name: 'v', type: 'text', value: def == null ? '' : def, mono: !!opts.mono, placeholder: opts.placeholder }] })
+                .then(function (r) { return r ? r.v : null; });
+        }
+        // A short notice in the corner that fades by itself (successes, "Imported 12 files").
+        function qdNotice(message) {
+            var host = document.getElementById('qd-notices');
+            if (!host) {
+                host = document.createElement('div');
+                host.id = 'qd-notices';
+                document.body.appendChild(host);
+            }
+            var n = document.createElement('div');
+            n.className = 'qd-notice';
+            n.textContent = String(message);
+            host.appendChild(n);
+            setTimeout(function () { n.classList.add('is-leaving'); }, 3200);
+            setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 3700);
+        }
+        // Every remaining alert() in the app now opens a Quadro message instead.
+        window.alert = function (message) { qdAlert(message); };
 
-            // Escape - close panels/modals first, otherwise deselect all
-            if (e.key === 'Escape') {
-                const linkedPanel = document.getElementById('linked-file-panel');
-                if (linkedPanel && linkedPanel.style.display !== 'none' && linkedPanel.style.display !== '') {
-                    closeLinkedFile();
-                    return;
-                }
-                const helpModal = document.getElementById('help-modal');
-                if (helpModal && helpModal.classList.contains('visible')) {
-                    closeHelp();
-                    return;
-                }
-                if (waveSel) {
-                    clearWaveSelection();
-                    return;
-                }
-                deselectAllFiles();
+        // ---- Keyboard shortcuts: one table of actions, customisable in the ? window ----
+        // Combos are written as e.g. 'Mod+Shift+K' (Mod = Cmd on Mac, Ctrl elsewhere),
+        // 'Space', 'Down', 'F7', 'Mod+Shift+Comma'.
+        var IS_MAC = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        function isTypingTarget() {
+            var el = document.activeElement;
+            if (!el) return false;
+            var t = el.tagName;
+            return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || el.isContentEditable;
+        }
+        function playOrPause() {
+            if (currentPlayingId) {
+                togglePlayPause();
+            } else if (selectedFileId) {
+                var file = allFiles.find(function (f) { return f.id === selectedFileId; });
+                if (file) playFile(file.id, file.filepath);
+            }
+        }
+        function escapeAction() {
+            var linkedPanel = document.getElementById('linked-file-panel');
+            if (linkedPanel && linkedPanel.style.display !== 'none' && linkedPanel.style.display !== '') { closeLinkedFile(); return; }
+            var helpModal = document.getElementById('help-modal');
+            if (helpModal && helpModal.classList.contains('visible')) { closeHelp(); return; }
+            if (waveSel) { clearWaveSelection(); return; }
+            deselectAllFiles();
+        }
+        function deleteSelectedFiles() {
+            if (selectedFileIds.size > 0) batchDelete();
+            else if (selectedFileId) deleteFile(selectedFileId);
+        }
+        function markerAtPlayheadOrSelection() {
+            if (waveSel && waveSel.end - waveSel.start > 0.0005) createMarkerFromSelection();
+            else dropMarkerAtPlayhead();
+        }
+
+        // inInputs: also works while typing in a field
+        var SHORTCUT_ACTIONS = [
+            { id: 'playPause',     group: 'Transport', label: 'Play / pause (plays the selection if there is one)', keys: ['Space'], run: playOrPause },
+            { id: 'marker',        group: 'Transport', label: 'Drop marker at playhead (or across the selection)', keys: ['M'], run: markerAtPlayheadOrSelection },
+            { id: 'nextMarker',    group: 'Transport', label: 'Jump to next marker', keys: ['Mod+Shift+M'], run: function () { jumpToNextMarker(); } },
+            { id: 'prevMarker',    group: 'Transport', label: 'Jump to previous marker', keys: ['Mod+Shift+Comma'], run: function () { jumpToPreviousMarker(); } },
+            { id: 'toolSelect',    group: 'Waveform', label: 'Selector tool (drag selects)', keys: ['S', 'F7'], run: function () { setWaveTool('selector'); } },
+            { id: 'toolGrab',      group: 'Waveform', label: 'Grabber tool (drag scrolls)', keys: ['G', 'F8'], run: function () { setWaveTool('grabber'); } },
+            { id: 'zoomIn',        group: 'Waveform', label: 'Zoom in', keys: ['R'], run: function () { zoomWaveform(1.3); } },
+            { id: 'zoomOut',       group: 'Waveform', label: 'Zoom out', keys: ['T'], run: function () { zoomWaveform(1 / 1.3); } },
+            { id: 'nextFile',      group: 'Files', label: 'Next file', keys: ['Down'], run: function () { navigateFiles(1); } },
+            { id: 'prevFile',      group: 'Files', label: 'Previous file', keys: ['Up'], run: function () { navigateFiles(-1); } },
+            { id: 'selectAll',     group: 'Files', label: 'Select all files', keys: ['Mod+A'], run: function () { selectAllFiles(); } },
+            { id: 'deselectAll',   group: 'Files', label: 'Deselect all files', keys: ['Mod+D'], run: function () { deselectAllFiles(); } },
+            { id: 'deleteFiles',   group: 'Files', label: 'Remove selected file(s) from the database', keys: ['Delete', 'Backspace'], run: deleteSelectedFiles },
+            { id: 'quickTag',      group: 'Files', label: 'Quick add tag', keys: ['Mod+T'], run: function () { quickAddTag(); } },
+            { id: 'escape',        group: 'Files', label: 'Close window / clear selection / deselect', keys: ['Escape'], run: escapeAction },
+            { id: 'searchFields',  group: 'Search', label: 'Search fields', keys: ['Mod+Shift+J'], inInputs: true, run: function () { document.getElementById('field-search').focus(); } },
+            { id: 'searchFiles',   group: 'Search', label: 'Search files', keys: ['Mod+Shift+K'], inInputs: true, run: function () { document.getElementById('file-search').focus(); } },
+            { id: 'searchContent', group: 'Search', label: 'Search field content', keys: ['Mod+Shift+L'], inInputs: true, run: function () { document.getElementById('content-search').focus(); } },
+            { id: 'newField',      group: 'Project', label: 'New field', keys: ['Mod+Shift+N'], inInputs: true, run: function () { newField(); } },
+            { id: 'importAudio',   group: 'Project', label: 'Import audio', keys: ['Mod+Shift+I'], inInputs: true, run: function () { importFiles(); } },
+            { id: 'openDatabase',  group: 'Project', label: 'Open database', keys: ['Mod+Shift+O'], inInputs: true, run: function () { openDatabase(); } },
+            { id: 'saveProject',   group: 'Project', label: 'Save project (export)', keys: ['Mod+S'], inInputs: true, run: function () { saveProject(); } },
+            { id: 'undo',          group: 'Project', label: 'Undo', keys: ['Mod+Z'], run: function () { undo(); } },
+            { id: 'redo',          group: 'Project', label: 'Redo', keys: ['Mod+Shift+Z'], run: function () { redo(); } }
+        ];
+        // Left to the system on purpose (copy, paste, quit, close window...)
+        var RESERVED_COMBOS = ['Mod+C', 'Mod+V', 'Mod+X', 'Mod+Q', 'Mod+W', 'Mod+H', 'Mod+Comma'];
+
+        var shortcutOverrides = {};
+        var shortcutIndex = {};
+        function shortcutKeys(action) {
+            return shortcutOverrides.hasOwnProperty(action.id) ? shortcutOverrides[action.id] : action.keys;
+        }
+        function rebuildShortcutIndex() {
+            shortcutIndex = {};
+            SHORTCUT_ACTIONS.forEach(function (act) {
+                shortcutKeys(act).forEach(function (c) { shortcutIndex[c] = act; });
+            });
+        }
+        rebuildShortcutIndex();
+        fetch('/api/settings/shortcuts')
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d && d.overrides) { shortcutOverrides = d.overrides; rebuildShortcutIndex(); renderShortcutList(); }
+            })
+            .catch(function () {});
+        function saveShortcuts() {
+            fetch('/api/settings/shortcuts', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ overrides: shortcutOverrides })
+            }).catch(function () {});
+        }
+
+        var CODE_NAMES = { Comma: 'Comma', Period: 'Period', Slash: 'Slash', Semicolon: 'Semicolon', Quote: 'Quote',
+                           BracketLeft: 'BracketLeft', BracketRight: 'BracketRight', Minus: 'Minus', Equal: 'Equal',
+                           Backquote: 'Backquote', Backslash: 'Backslash', IntlBackslash: 'IntlBackslash' };
+        var KEY_NAMES = { ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', ' ': 'Space' };
+        function comboFromEvent(e) {
+            var k = e.key;
+            if (k === 'Shift' || k === 'Control' || k === 'Alt' || k === 'Meta' || k === 'CapsLock' || k === 'Dead' || !k) return null;
+            var name;
+            var code = e.code || '';
+            if (code.indexOf('Digit') === 0) name = code.slice(5);
+            else if (CODE_NAMES[code]) name = CODE_NAMES[code];
+            else if (code.indexOf('Key') === 0 && (e.altKey || k.length !== 1)) name = code.slice(3);
+            else if (KEY_NAMES[k]) name = KEY_NAMES[k];
+            else if (k.length === 1) name = k.toUpperCase();
+            else name = k;
+            var parts = [];
+            if (IS_MAC ? e.metaKey : e.ctrlKey) parts.push('Mod');
+            if (IS_MAC && e.ctrlKey) parts.push('Ctrl');
+            if (!IS_MAC && e.metaKey) parts.push('Meta');
+            if (e.altKey) parts.push('Alt');
+            if (e.shiftKey) parts.push('Shift');
+            parts.push(name);
+            return parts.join('+');
+        }
+        var LABELS = { Mod: IS_MAC ? '⌘' : 'Ctrl', Ctrl: '⌃', Meta: 'Win', Alt: IS_MAC ? '⌥' : 'Alt', Shift: '⇧',
+                       Up: '↑', Down: '↓', Left: '←', Right: '→', Comma: ',', Period: '.', Slash: '/', Semicolon: ';',
+                       Quote: "'", BracketLeft: '[', BracketRight: ']', Minus: '-', Equal: '=', Backquote: '`',
+                       Backslash: 'Backslash', Backspace: '⌫', Delete: 'Del', Escape: 'Esc', Enter: '↵' };
+        function comboLabel(c) {
+            return c.split('+').map(function (p) { return LABELS[p] || p; }).join(IS_MAC ? ' ' : ' + ');
+        }
+
+        // Capture: while customising, the next key combination goes to the chosen action.
+        var shortcutCapture = null;
+        var shortcutEditing = false;
+        window.addEventListener('keydown', function (e) {
+            if (!shortcutCapture) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.key === 'Escape' && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
+                shortcutCapture = null;
+                setShortcutNote('');
+                renderShortcutList();
                 return;
             }
-            
-            // Cmd+T - Quick tag
-            if (cmdKey && e.key === 't') {
-                e.preventDefault();
-                quickAddTag();
+            var combo = comboFromEvent(e);
+            if (!combo) return;                          // modifier on its own: keep waiting
+            var target = SHORTCUT_ACTIONS.find(function (a) { return a.id === shortcutCapture; });
+            shortcutCapture = null;
+            if (RESERVED_COMBOS.indexOf(combo) !== -1) {
+                setShortcutNote(comboLabel(combo) + ' is left to the system and can\\'t be used.');
+                renderShortcutList();
                 return;
             }
+            var note = '';
+            var owner = shortcutIndex[combo];
+            if (owner && owner !== target) {
+                shortcutOverrides[owner.id] = shortcutKeys(owner).filter(function (c) { return c !== combo; });
+                note = comboLabel(combo) + ' moved here from "' + owner.label + '".';
+            }
+            var keys = shortcutKeys(target).slice();
+            if (keys.indexOf(combo) === -1) keys.push(combo);
+            shortcutOverrides[target.id] = keys.slice(-4);
+            tidyOverrides();
+            rebuildShortcutIndex();
+            saveShortcuts();
+            setShortcutNote(note);
+            renderShortcutList();
+        }, true);
+
+        function tidyOverrides() {
+            // Drop overrides that are back to the default, so defaults can evolve.
+            SHORTCUT_ACTIONS.forEach(function (a) {
+                var o = shortcutOverrides[a.id];
+                if (o && o.length === a.keys.length && o.every(function (c, i) { return c === a.keys[i]; })) delete shortcutOverrides[a.id];
+            });
+        }
+        function setShortcutNote(t) {
+            var el = document.getElementById('sc-note');
+            if (el) { el.textContent = t; el.style.display = t ? 'block' : 'none'; }
+        }
+        function toggleShortcutEdit() {
+            shortcutEditing = !shortcutEditing;
+            shortcutCapture = null;
+            setShortcutNote('');
+            renderShortcutList();
+        }
+        function resetShortcuts() {
+            shortcutOverrides = {};
+            shortcutCapture = null;
+            rebuildShortcutIndex();
+            saveShortcuts();
+            setShortcutNote('All shortcuts are back to their defaults.');
+            renderShortcutList();
+        }
+        function removeShortcut(actionId, combo) {
+            var act = SHORTCUT_ACTIONS.find(function (a) { return a.id === actionId; });
+            shortcutOverrides[actionId] = shortcutKeys(act).filter(function (c) { return c !== combo; });
+            tidyOverrides();
+            rebuildShortcutIndex();
+            saveShortcuts();
+            renderShortcutList();
+        }
+        function startShortcutCapture(actionId) {
+            shortcutCapture = actionId;
+            setShortcutNote('Press the new key combination. Esc cancels.');
+            renderShortcutList();
+        }
+        function escapeHtml(t) {
+            return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function renderShortcutList() {
+            var ul = document.getElementById('shortcut-list-keys');
+            if (!ul) return;
+            var editBtn = document.getElementById('sc-edit-btn');
+            var resetBtn = document.getElementById('sc-reset-btn');
+            if (editBtn) editBtn.textContent = shortcutEditing ? 'Done' : 'Customise';
+            if (resetBtn) resetBtn.style.display = shortcutEditing ? '' : 'none';
+            var html = '';
+            var lastGroup = null;
+            SHORTCUT_ACTIONS.forEach(function (act) {
+                if (act.group !== lastGroup) {
+                    html += '<li class="sc-group">' + escapeHtml(act.group) + '</li>';
+                    lastGroup = act.group;
+                }
+                var keys = shortcutKeys(act);
+                var caps = keys.map(function (c) {
+                    var x = shortcutEditing ? '<button class="sc-remove" title="Remove" onclick="removeShortcut(\\'' + act.id + '\\', \\'' + c + '\\')">×</button>' : '';
+                    return '<span class="shortcut-key">' + escapeHtml(comboLabel(c)) + x + '</span>';
+                }).join(' ');
+                if (!keys.length) caps = '<span class="sc-none">none</span>';
+                if (shortcutEditing) {
+                    caps += shortcutCapture === act.id
+                        ? ' <span class="shortcut-key sc-waiting">press keys…</span>'
+                        : ' <button class="btn btn-small sc-add" onclick="startShortcutCapture(\\'' + act.id + '\\')">+ Key</button>';
+                }
+                var changed = shortcutOverrides.hasOwnProperty(act.id) ? ' sc-changed' : '';
+                html += '<li class="sc-row' + changed + '"><span>' + escapeHtml(act.label) + '</span><span class="sc-keys">' + caps + '</span></li>';
+            });
+            ul.innerHTML = html;
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (shortcutCapture) return;
+            var combo = comboFromEvent(e);
+            if (!combo) return;
+            var act = shortcutIndex[combo];
+            if (!act) return;
+            if (isTypingTarget() && !act.inInputs) return;   // let the field have the key
+            e.preventDefault();
+            act.run(e);
         });
-        
+
         function navigateFiles(direction) {
             const visibleFiles = getVisibleFiles();
             if (visibleFiles.length === 0) return;
@@ -3464,7 +3998,7 @@ HTML_TEMPLATE = '''
         }
         
         function quickAddTag() {
-            const tag = prompt('Enter tag:');
+            qdPrompt(selectedFileIds.size > 0 ? 'Tag to add to the ' + selectedFileIds.size + ' selected file(s):' : 'Tag to add:', '', {title: 'Add tag', ok: 'Add'}).then(tag => {
             if (!tag) return;
             
             if (selectedFileIds.size > 0) {
@@ -3487,6 +4021,7 @@ HTML_TEMPLATE = '''
                     loadFileMetadata(selectedFileId);
                 });
             }
+            });
         }
         
         let _lastBulkShown = false;
@@ -3538,10 +4073,14 @@ HTML_TEMPLATE = '''
         }
         
         function showHelp() {
+            renderShortcutList();
             document.getElementById('help-modal').classList.add('visible');
         }
         
         function closeHelp() {
+            shortcutCapture = null;
+            shortcutEditing = false;
+            setShortcutNote('');
             document.getElementById('help-modal').classList.remove('visible');
         }
         
@@ -3586,7 +4125,7 @@ HTML_TEMPLATE = '''
                         <div style="display: flex; justify-content: space-between; align-items: start;">
                             <div>
                                 <div style="font-weight: 500;">${f.name}</div>
-                                <div style="font-size: 11px; color: #94a3b8;">${f.type}${f.type === 'parameter' ? ' (' + f.min + '-' + f.max + ')' : ''}</div>
+                                <div style="font-size: 11px; color: var(--grafite);">${f.type}${f.type === 'parameter' ? ' (' + f.min + '-' + f.max + ')' : ''}</div>
                             </div>
                             <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); deleteField(${f.id})" style="padding: 2px 6px;">×</button>
                         </div>
@@ -3790,7 +4329,7 @@ HTML_TEMPLATE = '''
         }
 
         function newGroup() {
-            const name = prompt('New group name:');
+            qdPrompt('Name of the new group:', '', {title: 'New group', ok: 'Create'}).then(name => {
             if (!name || !name.trim()) return;
             fetch('/api/groups', {
                 method: 'POST',
@@ -3801,10 +4340,11 @@ HTML_TEMPLATE = '''
                 if (res.id) expandedGroupIds.add(res.id);
                 loadFiles();
             });
+            });
         }
 
         function newSubGroup(parentId) {
-            const name = prompt('New subgroup name:');
+            qdPrompt('Name of the new subgroup:', '', {title: 'New subgroup', ok: 'Create'}).then(name => {
             if (!name || !name.trim()) return;
             fetch('/api/groups', {
                 method: 'POST',
@@ -3815,6 +4355,7 @@ HTML_TEMPLATE = '''
                 expandedGroupIds.add(parentId);
                 if (res.id) expandedGroupIds.add(res.id);
                 loadFiles();
+            });
             });
         }
 
@@ -3860,13 +4401,15 @@ HTML_TEMPLATE = '''
         function deleteGroup(groupId) {
             const g = allGroups.find(x => x.id === groupId);
             const label = g ? g.name : 'this group';
-            if (!confirm(`Delete group "${label}"? Its files and subgroups will move up one level.`)) return;
+            qdConfirm(`Delete group "${label}"? Its files and subgroups move up one level.`, {title: 'Delete group', ok: 'Delete', danger: true}).then(ok => {
+            if (!ok) return;
             fetch('/api/groups/' + groupId, {method: 'DELETE'})
                 .then(r => r.json()).then(res => {
                     if (!res.success) { alert('Delete failed: ' + (res.error || 'unknown')); return; }
                     expandedGroupIds.delete(groupId);
                     loadFiles();
                 });
+            });
         }
 
         function moveSelectionToGroup(groupId) {
@@ -3897,7 +4440,7 @@ HTML_TEMPLATE = '''
         }
         
         function deleteFile(fileId) {
-            if (!confirm('Delete this file from database?')) return;
+            qdConfirm('Remove this file from the database? The audio file on disk is not touched.', {title: 'Remove file', ok: 'Remove', danger: true}).then(ok => { if (!ok) return;
             
             fetch('/api/file/' + fileId, {
                 method: 'DELETE'
@@ -3910,10 +4453,11 @@ HTML_TEMPLATE = '''
                 selectedFileIds.delete(fileId);
                 loadFiles();
             });
+            });
         }
         
         function deleteField(fieldId) {
-            if (!confirm('Delete this field? All values will be lost.')) return;
+            qdConfirm('Delete this field? Its values on every file will be lost.', {title: 'Delete field', ok: 'Delete', danger: true}).then(ok => { if (!ok) return;
             
             fetch('/api/field/' + fieldId, {
                 method: 'DELETE'
@@ -3921,12 +4465,13 @@ HTML_TEMPLATE = '''
                 loadFields();
                 if (selectedFileId) loadFileMetadata(selectedFileId);
             });
+            });
         }
         
         function editField(fieldId) {
             const field = allFields.find(f => f.id === fieldId);
             if (!field) return;
-            const newName = prompt(`Rename field "${field.name}" to:`, field.name);
+            qdPrompt(`Rename field "${field.name}" to:`, field.name, {title: 'Rename field', ok: 'Rename'}).then(newName => {
             if (!newName || newName.trim() === '' || newName.trim() === field.name) return;
             fetch('/api/field/' + fieldId, {
                 method: 'PUT',
@@ -3939,6 +4484,7 @@ HTML_TEMPLATE = '''
                 }
                 loadFields();
                 if (selectedFileId) loadFileMetadata(selectedFileId);
+            });
             });
         }
         
@@ -3968,6 +4514,7 @@ HTML_TEMPLATE = '''
         
         function showPlayerBar(filename) {
             document.getElementById('player-bar').classList.add('visible');
+            document.getElementById('wave-strip').classList.add('has-audio');
             document.getElementById('player-filename').textContent = filename;
             document.getElementById('player-play-btn').textContent = '⏸';
             updatePlayerMarkers();
@@ -3975,6 +4522,7 @@ HTML_TEMPLATE = '''
         
         function hidePlayerBar() {
             document.getElementById('player-bar').classList.remove('visible');
+            document.getElementById('wave-strip').classList.remove('has-audio');
         }
         
         function togglePlayPause() {
@@ -4002,7 +4550,7 @@ HTML_TEMPLATE = '''
         // (The old mouse-wheel zoom was removed; use the r / t keys or Ctrl+drag.)
         // ============================================================
         const MARKER_EDGE_GRAB_PX = 8;
-        // ---- Edit tools (Pro Tools style): Grabber ✋ = drag pans, Selector I = drag selects ----
+        // ---- Edit tools (Pro Tools style): Grabber = drag pans, Selector = drag selects ----
         var waveTool = 'grabber';
         try { if (localStorage.getItem('earmark_wave_tool') === 'selector') waveTool = 'selector'; } catch (e) {}
         var waveSel = null;              // {start, end} in seconds, or null
@@ -4116,10 +4664,11 @@ HTML_TEMPLATE = '''
             }
             var wasPlaying = !audioPlayer.paused;
             audioPlayer.pause();
-            var label = prompt('Marker label (' + secondsToHMS(waveSel.start) + ' → ' + secondsToHMS(waveSel.end) + '):', '');
+            var selStart = waveSel.start, selEnd = waveSel.end;
+            qdPrompt('Label for the marker ' + secondsToHMS(selStart) + ' → ' + secondsToHMS(selEnd) + ':', '', {title: 'New marker', ok: 'Add'}).then(function (label) {
             if (!label) { if (wasPlaying) audioPlayer.play(); return; }
-            var startStr = secondsToHMS(waveSel.start);
-            var endStr = secondsToHMS(Math.max(waveSel.end, waveSel.start + 0.001));
+            var startStr = secondsToHMS(selStart);
+            var endStr = secondsToHMS(Math.max(selEnd, selStart + 0.001));
             var fileId = currentPlayingId, fieldId = currentMarkersFieldId;
             fetch('/api/file/' + fileId)
                 .then(function (r) { return r.json(); })
@@ -4141,6 +4690,7 @@ HTML_TEMPLATE = '''
                         if (wasPlaying) audioPlayer.play();
                     });
                 });
+            });
         }
 
         // Trackpad two-finger horizontal swipe pans the zoomed waveform (vertical scroll is left alone).
@@ -4387,9 +4937,10 @@ HTML_TEMPLATE = '''
         }
         
         // Position the playhead and progress-fill relative to the visible (zoomed) window
-        function updatePlayheadPosition() {
+        function updatePlayheadPosition(t) {
             if (!audioPlayer || !audioPlayer.duration) return;
-            const absFrac = audioPlayer.currentTime / audioPlayer.duration;
+            if (t === undefined) t = audioPlayer.currentTime;
+            const absFrac = t / audioPlayer.duration;
             // Playhead: position within visible window, clamp to [-5,105] so it visibly
             // "leaves" the viewport when out of range rather than snapping to 0 or 100.
             let screenPct = (absFrac - waveformOffset) * waveformZoom * 100;
@@ -4408,26 +4959,77 @@ HTML_TEMPLATE = '''
             if (fill) fill.style.width = fillPct + '%';
         }
 
-        // Update player progress
+        // Smooth playhead: while playing, move it on every screen frame instead of
+        // only on 'timeupdate' (which fires ~4 times a second and makes it tick).
+        // If the reported time hasn't advanced since the last frame, extrapolate
+        // from the wall clock so the line glides between updates.
+        var playheadRAF = null;
+        var phLastMedia = -1;
+        var phLastWall = 0;
+
+        function playheadFrame(now) {
+            if (!audioPlayer || audioPlayer.paused) {
+                playheadRAF = null;
+                updatePlayheadPosition();
+                return;
+            }
+            if (!audioPlayer.duration) {
+                // Length not known yet (file still loading): wait for the next frame.
+                playheadRAF = requestAnimationFrame(playheadFrame);
+                return;
+            }
+            var t = audioPlayer.currentTime;
+            if (t !== phLastMedia) {
+                phLastMedia = t;
+                phLastWall = now;
+            } else {
+                var ahead = (now - phLastWall) / 1000 * (audioPlayer.playbackRate || 1);
+                if (ahead > 0.5) ahead = 0.5;
+                t = phLastMedia + ahead;
+            }
+            if (t > audioPlayer.duration) t = audioPlayer.duration;
+            updatePlayheadPosition(t);
+            followPlayheadIfNeeded();
+            playheadRAF = requestAnimationFrame(playheadFrame);
+        }
+
+        function startPlayheadAnimation() {
+            phLastMedia = -1;
+            if (!playheadRAF) playheadRAF = requestAnimationFrame(playheadFrame);
+        }
+
+        function stopPlayheadAnimation() {
+            if (playheadRAF) { cancelAnimationFrame(playheadRAF); playheadRAF = null; }
+            updatePlayheadPosition();
+        }
+
+        // Update player progress (counter text; playhead only when not animating)
         audioPlayer.addEventListener('timeupdate', () => {
             if (audioPlayer.duration) {
-                updatePlayheadPosition();
-                followPlayheadIfNeeded();
+                if (!playheadRAF) {
+                    updatePlayheadPosition();
+                    followPlayheadIfNeeded();
+                }
                 document.getElementById('player-current-time').textContent = formatTimeHMS(audioPlayer.currentTime);
             }
         });
+
+        audioPlayer.addEventListener('seeked', () => { phLastMedia = -1; });
         
         audioPlayer.addEventListener('ended', () => {
+            stopPlayheadAnimation();
             currentPlayingId = null;
             document.getElementById('player-play-btn').textContent = '▶';
             renderFiles();
         });
         
         audioPlayer.addEventListener('pause', () => {
+            stopPlayheadAnimation();
             document.getElementById('player-play-btn').textContent = '▶';
         });
         
         audioPlayer.addEventListener('play', () => {
+            startPlayheadAnimation();
             document.getElementById('player-play-btn').textContent = '⏸';
         });
         
@@ -4531,6 +5133,7 @@ function updatePlayerMarkers() {
             labelEl.className = 'player-marker-label';
             labelEl.textContent = m.label;
             labelEl.style.color = color.text;
+            labelEl.style.background = color.border;
             markerEl.appendChild(labelEl);
  
             // Edge handles + body drag — only when we know the field id
@@ -4678,7 +5281,7 @@ function updatePlayerMarkers() {
             const ids = Object.keys(markerFieldsState);
             let html = '';
             if (ids.length === 0) {
-                html = '<div style="padding:6px 8px;color:#94a3b8;font-size:12px;">No marker fields on this file</div>';
+                html = '<div style="padding:6px 8px;color:var(--grafite);font-size:12px;">No marker fields on this file</div>';
             } else {
                 html += '<label><input type="checkbox" id="mv-all" ' +
                         (ids.every(id => markerFieldsState[id].visible) ? 'checked' : '') +
@@ -4688,17 +5291,17 @@ function updatePlayerMarkers() {
                     const st = markerFieldsState[id];
                     // Use first marker's color as a hint, or neutral
                     const first = st.markers[0];
-                    const swatch = first ? getMarkerColor(first.color).border : '#94a3b8';
+                    const swatch = first ? getMarkerColor(first.color).border : 'var(--grafite)';
                     html += '<label>' +
                         '<input type="checkbox" ' + (st.visible ? 'checked' : '') +
                         ' onchange="setMarkerFieldVisibility(' + id + ', this.checked)">' +
                         '<span class="mv-swatch" style="background:' + swatch + '"></span>' +
                         '<span>' + escapeHtml(st.name) + '</span>' +
-                        '<span style="margin-left:auto;color:#64748b;font-size:10px;">(' + st.markers.length + ')</span>' +
+                        '<span style="margin-left:auto;color:var(--grafite);font-size:10px;">(' + st.markers.length + ')</span>' +
                     '</label>';
                 });
                 html += '<hr/>';
-                html += '<label onclick="setAllMarkerVisibility(false); event.preventDefault();" style="justify-content:center;color:#94a3b8;">Hide all</label>';
+                html += '<label onclick="setAllMarkerVisibility(false); event.preventDefault();" style="justify-content:center;color:var(--grafite);">Hide all</label>';
             }
             menu.innerHTML = html;
         }
@@ -4769,7 +5372,7 @@ function updatePlayerMarkers() {
             audioPlayer.pause();
             
             const currentTime = formatTime(audioPlayer.currentTime);
-            const label = prompt('Marker label:', '');
+            qdPrompt('Label for the marker at ' + currentTime + ':', '', {title: 'New marker', ok: 'Add'}).then(label => {
             if (!label) {
                 if (wasPlaying) audioPlayer.play();
                 return;
@@ -4807,6 +5410,7 @@ function updatePlayerMarkers() {
                         if (wasPlaying) audioPlayer.play();
                     });
                 });
+            });
         }
         
         function jumpToNextMarker() {
@@ -4860,9 +5464,9 @@ function updatePlayerMarkers() {
                     // this panel apply to all of them (except markers/datalink, which
                     // remain single-file).
                     const _bulkBanner = isBulkActive()
-                        ? `<div style="margin: 0 0 12px 0; padding: 8px 10px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.4); border-radius: 4px; font-size: 12px; color: #93c5fd;">
+                        ? `<div style="margin: 0 0 12px 0; padding: 8px 10px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.4); border-radius: 4px; font-size: 12px; color: var(--ardesia);">
                                Editing <b>${selectedFileIds.size}</b> files — changes apply to all selected.
-                               <span style="color:#94a3b8;">(Markers and datalinks affect only the focused file.)</span>
+                               <span style="color:var(--grafite);">(Markers and datalinks affect only the focused file.)</span>
                            </div>`
                         : '';
 
@@ -4949,7 +5553,7 @@ function updatePlayerMarkers() {
                                     const hasContent = file.fields[field.name + '_content'];
                                     html += `
                                         <div class="form-group ${inactiveClass}">
-                                            <label>${field.name} ${hasContent ? '<span style="color: #10b981; font-size: 10px;">● indexed</span>' : ''}</label>
+                                            <label>${field.name} ${hasContent ? '<span style="color: var(--ok); font-size: 10px;">● indexed</span>' : ''}</label>
                                             ${value ? `
                                                 <div class="datalink-display">
                                                     <a href="#" onclick="openDataLink('${value.replace(/'/g, "\\'")}'); return false;" title="${value}">${value.split('/').pop()}</a>
@@ -4960,8 +5564,8 @@ function updatePlayerMarkers() {
                                                             onclick="clearDataLink(${field.id})">×</button>
                                                     </div>
                                                 </div>
-                                                ${hasContent ? `<div style="font-size: 11px; color: #64748b; margin-top: 4px;">Content searchable (${Math.round(file.fields[field.name + '_content'].length / 1000)}KB indexed)</div>` : 
-                                                    `<div style="font-size: 11px; color: #f59e0b; margin-top: 4px;">Warning: content not indexed - file may not exist or be unreadable</div>`}
+                                                ${hasContent ? `<div style="font-size: 11px; color: var(--grafite); margin-top: 4px;">Content searchable (${Math.round(file.fields[field.name + '_content'].length / 1000)}KB indexed)</div>` : 
+                                                    `<div style="font-size: 11px; color: var(--warn); margin-top: 4px;">Warning: content not indexed - file may not exist or be unreadable</div>`}
                                             ` : ''}
                                             <div class="tag-input-group" style="margin-top: 8px;">
                                                 <input type="text" id="datalink-${field.id}" placeholder="Enter file path..." value="${value}">
@@ -5013,7 +5617,7 @@ function updatePlayerMarkers() {
                                                         <button class="marker-remove" onclick="event.stopPropagation(); removeMarker(${field.id}, ${i})">×</button>
                                                     </div>
                                                 `}).join('')}
-                                                ${markers.length === 0 ? '<div style="color: #64748b; font-size: 13px; padding: 8px;">No markers yet (press M while playing to add)</div>' : ''}
+                                                ${markers.length === 0 ? '<div style="color: var(--grafite); font-size: 13px; padding: 8px;">No markers yet (press M while playing to add)</div>' : ''}
                                             </div>
                                             <div class="marker-input-row">
                                                 <input type="text" class="time-input" id="marker-start-${field.id}" placeholder="HH:MM:SS.mmm" value="00:00:00.000">
@@ -5082,14 +5686,14 @@ function updatePlayerMarkers() {
         
         // Marker colors
         const markerColors = [
-            {name: 'Yellow', bg: 'rgba(251, 191, 36, 0.4)', border: '#fbbf24', text: '#fbbf24'},
-            {name: 'Blue', bg: 'rgba(59, 130, 246, 0.4)', border: '#3b82f6', text: '#3b82f6'},
-            {name: 'Green', bg: 'rgba(34, 197, 94, 0.4)', border: '#22c55e', text: '#22c55e'},
-            {name: 'Red', bg: 'rgba(239, 68, 68, 0.4)', border: '#ef4444', text: '#ef4444'},
-            {name: 'Purple', bg: 'rgba(168, 85, 247, 0.4)', border: '#a855f7', text: '#a855f7'},
-            {name: 'Pink', bg: 'rgba(236, 72, 153, 0.4)', border: '#ec4899', text: '#ec4899'},
-            {name: 'Orange', bg: 'rgba(249, 115, 22, 0.4)', border: '#f97316', text: '#f97316'},
-            {name: 'Cyan', bg: 'rgba(6, 182, 212, 0.4)', border: '#06b6d4', text: '#06b6d4'},
+            {name: 'Yellow', bg: 'rgba(192, 138, 46, 0.30)', border: '#c08a2e', text: '#1a1c1d'},
+            {name: 'Blue', bg: 'rgba(74, 115, 145, 0.30)', border: '#4a7391', text: '#f3f4f2'},
+            {name: 'Green', bg: 'rgba(95, 125, 78, 0.30)', border: '#5f7d4e', text: '#f3f4f2'},
+            {name: 'Red', bg: 'rgba(184, 69, 47, 0.30)', border: '#b8452f', text: '#f3f4f2'},
+            {name: 'Purple', bg: 'rgba(122, 90, 140, 0.30)', border: '#7a5a8c', text: '#f3f4f2'},
+            {name: 'Pink', bg: 'rgba(181, 97, 125, 0.30)', border: '#b5617d', text: '#f3f4f2'},
+            {name: 'Orange', bg: 'rgba(196, 105, 42, 0.30)', border: '#c4692a', text: '#1a1c1d'},
+            {name: 'Cyan', bg: 'rgba(63, 138, 140, 0.30)', border: '#3f8a8c', text: '#f3f4f2'},
         ];
         
         function getMarkerColor(colorName) {
@@ -5219,7 +5823,7 @@ function updatePlayerMarkers() {
                         bodyEl.textContent = data.content || '(empty file)';
                         if (data.truncated) {
                             const note = document.createElement('div');
-                            note.style.cssText = 'color:#f59e0b;font-size:11px;margin-top:12px;padding-top:8px;border-top:1px solid #334155;';
+                            note.style.cssText = 'color:var(--warn);font-size:11px;margin-top:12px;padding-top:8px;border-top:1px solid var(--rule-soft);';
                             note.textContent = 'Warning: file truncated at ' + Math.round(data.size_limit / 1024) + 'KB. Full size: ' + Math.round(data.full_size / 1024) + 'KB.';
                             bodyEl.appendChild(note);
                         }
@@ -5364,7 +5968,7 @@ function updatePlayerMarkers() {
         
         // Batch operations
         function batchAddTag() {
-            const tag = prompt('Enter tag to add to all selected files:');
+            qdPrompt('Tag to add to the ' + selectedFileIds.size + ' selected file(s):', '', {title: 'Batch tag', ok: 'Add'}).then(tag => {
             if (!tag) return;
             
             fetch('/api/files/batch/tag', {
@@ -5375,6 +5979,7 @@ function updatePlayerMarkers() {
                 loadFiles();
                 if (selectedFileId) loadFileMetadata(selectedFileId);
             });
+            });
         }
         
         function batchSetField() {
@@ -5383,31 +5988,32 @@ function updatePlayerMarkers() {
                 return;
             }
             
-            const fieldName = prompt('Enter field name to set:\\n' + allFields.map(f => '- ' + f.name).join('\\n'));
-            if (!fieldName) return;
-            
-            const field = allFields.find(f => f.name.toLowerCase() === fieldName.toLowerCase());
-            if (!field) {
-                alert('Field not found');
-                return;
-            }
-            
-            const value = prompt(`Enter value for "${field.name}":`);
-            if (value === null) return;
-            
-            fetch('/api/files/batch/value', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({file_ids: Array.from(selectedFileIds), field_id: field.id, value})
-            }).then(() => {
-                loadFiles();
-                if (selectedFileId) loadFileMetadata(selectedFileId);
+            qdDialog({
+                title: 'Set field',
+                message: 'Set one field to the same value on the ' + selectedFileIds.size + ' selected file(s).',
+                fields: [
+                    {name: 'field', label: 'Field', type: 'select', options: allFields.map(f => ({value: String(f.id), label: f.name + '  (' + f.type + ')'}))},
+                    {name: 'value', label: 'Value', type: 'text'}
+                ],
+                ok: 'Set'
+            }).then(v => {
+                if (!v) return;
+                const field = allFields.find(f => String(f.id) === v.field);
+                if (!field) return;
+                fetch('/api/files/batch/value', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file_ids: Array.from(selectedFileIds), field_id: field.id, value: v.value})
+                }).then(() => {
+                    loadFiles();
+                    if (selectedFileId) loadFileMetadata(selectedFileId);
+                });
             });
         }
         
         function batchDelete() {
             const count = selectedFileIds.size;
-            if (!confirm(`Delete ${count} file(s) from database?`)) return;
+            qdConfirm(`Remove ${count} file(s) from the database? The audio files on disk are not touched.`, {title: 'Remove files', ok: 'Remove', danger: true}).then(ok => { if (!ok) return;
             
             fetch('/api/files/batch/delete', {
                 method: 'POST',
@@ -5421,6 +6027,7 @@ function updatePlayerMarkers() {
                 }
                 selectedFileIds.clear();
                 loadFiles();
+            });
             });
         }
         
@@ -5521,9 +6128,11 @@ function updatePlayerMarkers() {
                 return;
             }
             const verb = overwrite ? 'overwrite values from' : 'import metadata from';
-            if (ids.length > 1 && !confirm(`This will ${verb} ${ids.length} file(s). New fields will be created automatically if needed. Continue?`)) {
-                return;
-            }
+            const ask = ids.length > 1
+                ? qdConfirm(`This will ${verb} ${ids.length} file(s). New fields are created automatically if needed.`, {title: 'Import file metadata', ok: 'Continue'})
+                : Promise.resolve(true);
+            ask.then(ok => {
+            if (!ok) return;
             fetch('/api/files/import-metadata', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -5547,33 +6156,45 @@ function updatePlayerMarkers() {
             }).catch(err => {
                 alert('Import failed: ' + err);
             });
+            });
         }
 
         function importFiles() {
-            const path = prompt('Enter folder path with audio files:');
-            if (!path) return;
-            
-            const recursive = confirm('Include subfolders?');
-            
-            fetch('/api/import', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({path, recursive})
-            }).then(r => r.json()).then(result => {
-                alert(`Imported ${result.imported} file(s)`);
-                loadFiles();
+            qdDialog({
+                title: 'Import audio',
+                fields: [
+                    {name: 'path', label: 'Folder with audio files', type: 'text', mono: true, placeholder: '/Users/…/Recordings'},
+                    {name: 'recursive', label: 'Include subfolders', type: 'check', value: true}
+                ],
+                ok: 'Import',
+                validate: v => v.path.trim() ? null : 'Enter a folder path.'
+            }).then(v => {
+                if (!v) return;
+                fetch('/api/import', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: v.path.trim(), recursive: v.recursive})
+                }).then(r => r.json()).then(result => {
+                    qdNotice(`Imported ${result.imported} file(s)`);
+                    loadFiles();
+                });
             });
         }
         
         function linkMetadataFiles() {
-            const path = prompt('Enter folder path with metadata files (.txt, .TextGrid, .csv, etc.):');
-            if (!path) return;
-            
-            const fieldName = prompt('Field name for these files (e.g., Transcription, Formants, PitchTrack):');
-            if (!fieldName) return;
-            
-            const recursive = confirm('Include subfolders?');
-            
+            qdDialog({
+                title: 'Link metadata files',
+                message: 'Files are matched to audio by name: B2213.wav ↔ B2213.txt, B2213_pitch.csv …',
+                fields: [
+                    {name: 'path', label: 'Folder with metadata files (.txt, .TextGrid, .csv …)', type: 'text', mono: true, placeholder: '/Users/…/Transcriptions'},
+                    {name: 'fieldName', label: 'Field name', type: 'text', placeholder: 'Transcription, Formants, PitchTrack …'},
+                    {name: 'recursive', label: 'Include subfolders', type: 'check', value: true}
+                ],
+                ok: 'Link',
+                validate: v => !v.path.trim() ? 'Enter a folder path.' : (!v.fieldName.trim() ? 'Enter a field name.' : null)
+            }).then(v => {
+            if (!v) return;
+            const path = v.path.trim(), fieldName = v.fieldName.trim(), recursive = v.recursive;
             fetch('/api/link-metadata', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -5583,44 +6204,90 @@ function updatePlayerMarkers() {
                 if (result.notFound > 0) {
                     msg += `\n${result.notFound} file(s) had no matching audio`;
                 }
-                alert(msg);
+                qdNotice(msg);
                 loadFields();
                 if (selectedFileId) loadFileMetadata(selectedFileId);
             });
+            });
         }
         
-        function newField() {
-            const name = prompt('Field name:');
-            if (!name) return;
-            
-            const type = prompt('Field type (parameter / text / choice / datalink / markers / tags / date):');
-            if (!type) return;
-
-            const validTypes = ['parameter', 'text', 'choice', 'datalink', 'markers', 'tags', 'date'];
-            if (!validTypes.includes(type.toLowerCase())) {
-                alert('Invalid type. Use: ' + validTypes.join(', '));
+        // ---- New field: a Quadro dialog instead of a chain of prompts ----
+        var nfType = null;
+        function newField() { openFieldDialog(); }
+        function openFieldDialog() {
+            nfType = null;
+            document.getElementById('nf-name').value = '';
+            document.getElementById('nf-min').value = '0';
+            document.getElementById('nf-max').value = '10';
+            document.getElementById('nf-choices').value = '';
+            setFieldDialogError('');
+            renderFieldTypes();
+            document.getElementById('field-modal').classList.add('visible');
+            setTimeout(function () { document.getElementById('nf-name').focus(); }, 0);
+        }
+        function closeFieldDialog() {
+            document.getElementById('field-modal').classList.remove('visible');
+        }
+        function setFieldDialogError(t) {
+            var el = document.getElementById('nf-error');
+            el.textContent = t;
+            el.style.display = t ? 'block' : 'none';
+        }
+        function renderFieldTypes() {
+            var btns = document.querySelectorAll('#nf-types .nf-type');
+            for (var i = 0; i < btns.length; i++) {
+                btns[i].classList.toggle('active', btns[i].getAttribute('data-type') === nfType);
+            }
+            document.getElementById('nf-opts-parameter').style.display = nfType === 'parameter' ? 'block' : 'none';
+            document.getElementById('nf-opts-choice').style.display = nfType === 'choice' ? 'block' : 'none';
+        }
+        (function () {
+            var btns = document.querySelectorAll('#nf-types .nf-type');
+            for (var i = 0; i < btns.length; i++) {
+                btns[i].addEventListener('click', function () {
+                    nfType = this.getAttribute('data-type');
+                    setFieldDialogError('');
+                    renderFieldTypes();
+                });
+            }
+            // Keys typed in the dialog stay in the dialog (no app shortcuts).
+            document.getElementById('field-modal').addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') { e.preventDefault(); closeFieldDialog(); }
+                else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); submitFieldDialog(); }
+                e.stopPropagation();
+            });
+        })();
+        function submitFieldDialog() {
+            var name = document.getElementById('nf-name').value.trim();
+            if (!name) { setFieldDialogError('Give the field a name.'); document.getElementById('nf-name').focus(); return; }
+            if (!nfType) { setFieldDialogError('Choose a type.'); return; }
+            if (allFields.some(function (f) { return f.name.toLowerCase() === name.toLowerCase(); })) {
+                setFieldDialogError('There is already a field called "' + name + '".');
                 return;
             }
-            
-            let min_val = null, max_val = null, choices = null;
-            
-            if (type === 'parameter') {
-                min_val = parseFloat(prompt('Min value:', '0'));
-                max_val = parseFloat(prompt('Max value:', '100'));
-            } else if (type === 'choice') {
-                choices = prompt('Choices (comma separated):').split(',').map(s => s.trim());
+            var min_val = null, max_val = null, choices = null;
+            if (nfType === 'parameter') {
+                min_val = parseFloat(document.getElementById('nf-min').value);
+                max_val = parseFloat(document.getElementById('nf-max').value);
+                if (isNaN(min_val) || isNaN(max_val)) { setFieldDialogError('Min and max must be numbers.'); return; }
+                if (min_val >= max_val) { setFieldDialogError('Max must be larger than min.'); return; }
+            } else if (nfType === 'choice') {
+                choices = document.getElementById('nf-choices').value.split(/[\\n,]/).map(function (c) { return c.trim(); })
+                    .filter(function (c, i, arr) { return c && arr.indexOf(c) === i; });
+                if (!choices.length) { setFieldDialogError('Add at least one option.'); return; }
             }
-            
             fetch('/api/field', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, type: type.toLowerCase(), min_val, max_val, choices})
-            }).then(() => {
+                body: JSON.stringify({ name: name, type: nfType, min_val: min_val, max_val: max_val, choices: choices })
+            }).then(function (r) { return r.json(); }).then(function (res) {
+                if (!res || res.id == null) { setFieldDialogError('Could not create the field (is the name already used?).'); return; }
+                closeFieldDialog();
                 loadFields();
                 if (selectedFileId) loadFileMetadata(selectedFileId);
-            });
+            }).catch(function (err) { setFieldDialogError('Could not create the field: ' + err.message); });
         }
-        
+
         function showConsole() {
             var panel = document.getElementById('console-panel');
             if (panel.style.display === 'none') {
@@ -5642,7 +6309,7 @@ function updatePlayerMarkers() {
                 consoleCmdHistory.unshift(cmd);
                 consoleCmdIndex = -1;
                 input.value = '';
-                consolePrint('> ' + cmd, '#3b82f6');
+                consolePrint('> ' + cmd, 'var(--ardesia)');
                 consoleRunCmd(cmd);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
@@ -5665,7 +6332,7 @@ function updatePlayerMarkers() {
         function consolePrint(text, color) {
             var output = document.getElementById('console-output');
             var line = document.createElement('div');
-            line.style.color = color || '#e2e8f0';
+            line.style.color = color || 'var(--inchiostro)';
             line.textContent = text;
             output.appendChild(line);
             output.scrollTop = output.scrollHeight;
@@ -5676,14 +6343,14 @@ function updatePlayerMarkers() {
             var command = parts[0].toLowerCase();
             
             if (command === 'help') {
-                consolePrint('Commands:', '#94a3b8');
-                consolePrint('  stats <field>                Stats for a field (or "tags" for file tags)', '#94a3b8');
-                consolePrint('  stats audio                  Audio file statistics (duration, size, format)', '#94a3b8');
-                consolePrint('  wordfreq <field> [limit]     Top words in a field (default: top 20)', '#94a3b8');
-                consolePrint('  wordfreq <field> count       How many unique words in a field', '#94a3b8');
-                consolePrint('  wordfreq <field> [limit] -s  With stop word filtering', '#94a3b8');
-                consolePrint('  help                         Show this help', '#94a3b8');
-                consolePrint('  clear                        Clear console output', '#94a3b8');
+                consolePrint('Commands:', 'var(--grafite)');
+                consolePrint('  stats <field>                Stats for a field (or "tags" for file tags)', 'var(--grafite)');
+                consolePrint('  stats audio                  Audio file statistics (duration, size, format)', 'var(--grafite)');
+                consolePrint('  wordfreq <field> [limit]     Top words in a field (default: top 20)', 'var(--grafite)');
+                consolePrint('  wordfreq <field> count       How many unique words in a field', 'var(--grafite)');
+                consolePrint('  wordfreq <field> [limit] -s  With stop word filtering', 'var(--grafite)');
+                consolePrint('  help                         Show this help', 'var(--grafite)');
+                consolePrint('  clear                        Clear console output', 'var(--grafite)');
                 return;
             }
             
@@ -5694,20 +6361,20 @@ function updatePlayerMarkers() {
             
             if (command === 'stats') {
                 if (!parts[1]) {
-                    consolePrint('Usage: stats <fieldname>', '#94a3b8');
-                    consolePrint('       stats audio', '#94a3b8');
+                    consolePrint('Usage: stats <fieldname>', 'var(--grafite)');
+                    consolePrint('       stats audio', 'var(--grafite)');
                     return;
                 }
                 var fieldName = parts[1];
                 
                 if (fieldName.toLowerCase() === 'audio') {
-                    consolePrint('Scanning audio files...', '#94a3b8');
+                    consolePrint('Scanning audio files...', 'var(--grafite)');
                     fetch('/api/stats/audio')
                         .then(function(resp) { return resp.json(); })
                         .then(function(data) {
                             consolePrint('Total files: ' + data.total_files);
                             if (data.files_not_found > 0) {
-                                consolePrint('Files not found on disk: ' + data.files_not_found, '#ef4444');
+                                consolePrint('Files not found on disk: ' + data.files_not_found, 'var(--rosso)');
                             }
                             if (data.total_duration_readable) {
                                 consolePrint('');
@@ -5747,7 +6414,7 @@ function updatePlayerMarkers() {
                                 }
                             }
                         })
-                        .catch(function(err) { consolePrint('Error: ' + err.message, '#ef4444'); });
+                        .catch(function(err) { consolePrint('Error: ' + err.message, 'var(--rosso)'); });
                     return;
                 }
                 
@@ -5755,7 +6422,7 @@ function updatePlayerMarkers() {
                     .then(function(resp) { return resp.json(); })
                     .then(function(data) {
                         if (data.error) {
-                            consolePrint('Error: ' + data.error, '#ef4444');
+                            consolePrint('Error: ' + data.error, 'var(--rosso)');
                             return;
                         }
                         consolePrint('Field: ' + data.field + ' (' + data.type + ')');
@@ -5771,7 +6438,7 @@ function updatePlayerMarkers() {
                                 consolePrint('Std Dev: ' + data.std_dev);
                                 consolePrint('Sum:     ' + data.sum);
                             } else {
-                                consolePrint('No numeric values found.', '#94a3b8');
+                                consolePrint('No numeric values found.', 'var(--grafite)');
                             }
                         } else if (data.type === 'choice') {
                             if (data.options) {
@@ -5801,14 +6468,14 @@ function updatePlayerMarkers() {
                             }
                         }
                     })
-                    .catch(function(err) { consolePrint('Error: ' + err.message, '#ef4444'); });
+                    .catch(function(err) { consolePrint('Error: ' + err.message, 'var(--rosso)'); });
                 return;
             }
             
             if (command === 'wordfreq') {
                 if (!parts[1]) {
-                    consolePrint('Usage: wordfreq <fieldname> [limit] [-s]', '#94a3b8');
-                    consolePrint('       wordfreq <fieldname> count', '#94a3b8');
+                    consolePrint('Usage: wordfreq <fieldname> [limit] [-s]', 'var(--grafite)');
+                    consolePrint('       wordfreq <fieldname> count', 'var(--grafite)');
                     return;
                 }
                 var fieldName = parts[1];
@@ -5818,11 +6485,11 @@ function updatePlayerMarkers() {
                     fetch('/api/stats/' + encodeURIComponent(fieldName) + '/wordfreq?countonly=1')
                         .then(function(resp) { return resp.json(); })
                         .then(function(data) {
-                            if (data.error) { consolePrint('Error: ' + data.error, '#ef4444'); return; }
+                            if (data.error) { consolePrint('Error: ' + data.error, 'var(--rosso)'); return; }
                             consolePrint('Field: ' + data.field + ' (' + data.type + ')');
                             consolePrint('Unique words: ' + data.unique_words);
                         })
-                        .catch(function(err) { consolePrint('Error: ' + err.message, '#ef4444'); });
+                        .catch(function(err) { consolePrint('Error: ' + err.message, 'var(--rosso)'); });
                     return;
                 }
                 
@@ -5834,7 +6501,7 @@ function updatePlayerMarkers() {
                 fetch('/api/stats/' + encodeURIComponent(fieldName) + '/wordfreq?limit=' + limit + '&stopwords=' + useStopwords)
                     .then(function(resp) { return resp.json(); })
                     .then(function(data) {
-                        if (data.error) { consolePrint('Error: ' + data.error, '#ef4444'); return; }
+                        if (data.error) { consolePrint('Error: ' + data.error, 'var(--rosso)'); return; }
                         consolePrint('Field: ' + data.field + ' (' + data.type + ')');
                         consolePrint('Unique words: ' + data.unique_words);
                         consolePrint('Showing top ' + data.showing + ':');
@@ -5846,12 +6513,12 @@ function updatePlayerMarkers() {
                             consolePrint('  ' + rank + '. ' + w.word + '  (' + w.count + ')');
                         }
                     })
-                    .catch(function(err) { consolePrint('Error: ' + err.message, '#ef4444'); });
+                    .catch(function(err) { consolePrint('Error: ' + err.message, 'var(--rosso)'); });
                 return;
             }
             
-            consolePrint('Unknown command: ' + command, '#ef4444');
-            consolePrint('Type "help" for available commands.', '#94a3b8');
+            consolePrint('Unknown command: ' + command, 'var(--rosso)');
+            consolePrint('Type "help" for available commands.', 'var(--grafite)');
         }
         
         function showFileStats() {
@@ -5865,7 +6532,7 @@ function updatePlayerMarkers() {
                     var panel = document.getElementById('metadata-panel');
                     var html = '<div style="padding: 4px;">';
                     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-                    html += '<span style="font-weight:600;color:#e2e8f0;">File Stats: ' + data.filename + '</span>';
+                    html += '<span style="font-weight:600;color:var(--inchiostro);">File Stats: ' + data.filename + '</span>';
                     html += '<button class="btn btn-secondary" onclick="loadFileMetadata(selectedFileId)" style="font-size:11px;padding:2px 8px;">Back</button>';
                     html += '</div>';
                     
@@ -5875,7 +6542,7 @@ function updatePlayerMarkers() {
                         var secs = Math.round(data.duration_sec % 60);
                         html += '<div class="form-group">';
                         html += '<label>Audio</label>';
-                        html += '<div style="color:#94a3b8;font-size:13px;line-height:1.8;">';
+                        html += '<div style="color:var(--grafite);font-size:13px;line-height:1.8;">';
                         html += 'Duration: ' + mins + ':' + (secs < 10 ? '0' : '') + secs + '<br>';
                         html += 'Sample rate: ' + data.sample_rate + ' Hz<br>';
                         html += 'Bit depth: ' + data.bit_depth + '-bit<br>';
@@ -5888,7 +6555,7 @@ function updatePlayerMarkers() {
                     if (data.tags && data.tags.length > 0) {
                         html += '<div class="form-group">';
                         html += '<label>Tags (' + data.tag_count + ')</label>';
-                        html += '<div style="color:#94a3b8;font-size:13px;">';
+                        html += '<div style="color:var(--grafite);font-size:13px;">';
                         for (var i = 0; i < data.tags.length; i++) {
                             html += '<span class="tag">' + data.tags[i] + '</span> ';
                         }
@@ -5903,7 +6570,7 @@ function updatePlayerMarkers() {
                         
                         html += '<div class="form-group">';
                         html += '<label>' + fname + ' (' + fdata.type + ')</label>';
-                        html += '<div style="color:#94a3b8;font-size:13px;line-height:1.8;">';
+                        html += '<div style="color:var(--grafite);font-size:13px;line-height:1.8;">';
                         
                         if (fdata.type === 'markers') {
                             html += 'Markers: ' + fdata.marker_count + '<br>';
@@ -5963,21 +6630,21 @@ function updatePlayerMarkers() {
             div.className = 'query-condition';
             div.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px;';
             div.innerHTML = `
-                <select style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b;">
+                <select style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft);">
                     <option value="AND">AND</option>
                     <option value="OR">OR</option>
                 </select>
-                <select id="qfield-${queryConditionCount}" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b;">
+                <select id="qfield-${queryConditionCount}" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft);">
                     <option value="">Select field...</option>
                 </select>
-                <select id="qop-${queryConditionCount}" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b;">
+                <select id="qop-${queryConditionCount}" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft);">
                     <option value="=">=</option>
                     <option value=">">></option>
                     <option value="<"><</option>
                     <option value="contains">contains</option>
                 </select>
-                <input type="text" id="qval-${queryConditionCount}" placeholder="value" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b; width: 150px;">
-                <button onclick="this.parentElement.remove()" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;">×</button>
+                <input type="text" id="qval-${queryConditionCount}" placeholder="value" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft); width: 150px;">
+                <button onclick="this.parentElement.remove()" style="background: var(--rosso); color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;">×</button>
             `;
             container.appendChild(div);
             loadFields(); // Refresh dropdowns
@@ -6029,16 +6696,16 @@ function updatePlayerMarkers() {
         function clearQuery() {
             document.getElementById('query-conditions').innerHTML = `
                 <div class="query-condition" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
-                    <select id="qfield-0" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b;">
+                    <select id="qfield-0" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft);">
                         <option value="">Select field...</option>
                     </select>
-                    <select id="qop-0" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b;">
+                    <select id="qop-0" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft);">
                         <option value="=">=</option>
                         <option value=">">></option>
                         <option value="<"><</option>
                         <option value="contains">contains</option>
                     </select>
-                    <input type="text" id="qval-0" placeholder="value" style="background: #475569; color: #e2e8f0; padding: 6px; border-radius: 4px; border: 1px solid #64748b; width: 150px;">
+                    <input type="text" id="qval-0" placeholder="value" style="background: var(--calce); color: var(--inchiostro); padding: 6px; border-radius: 4px; border: 1px solid var(--rule-soft); width: 150px;">
                 </div>
             `;
             document.getElementById('query-results').textContent = '';
@@ -6074,6 +6741,190 @@ function updatePlayerMarkers() {
                     URL.revokeObjectURL(url);
                 });
         }
+
+        // ---- Quadro dropdowns ----
+        // Native <select> menus open as the system pop-up, which can't be styled.
+        // Each select gets a Quadro button and menu; the real select stays (hidden)
+        // underneath, so values, change events and existing code keep working.
+        (function () {
+            var openState = null;              // { sel, menu, items, active }
+            function labelOf(sel) {
+                var o = sel.options[sel.selectedIndex];
+                return o ? o.text : '';
+            }
+            function sync(sel) {
+                var q = sel._qsel;
+                if (!q) return;
+                q.label.textContent = labelOf(sel) || ' ';
+                q.btn.disabled = sel.disabled;
+            }
+            function enhance(sel) {
+                if (sel._qsel || sel.multiple || sel.size > 1) return;
+                var wrap = document.createElement('span');
+                wrap.className = 'qsel' + (sel.closest('.speed-glass') ? ' qsel-glass' : '');
+                var st = sel.style;
+                ['width', 'flex', 'minWidth', 'maxWidth', 'marginLeft', 'marginRight'].forEach(function (k) {
+                    if (st[k]) wrap.style[k] = st[k];
+                });
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'qsel-btn';
+                if (sel.title) btn.title = sel.title;
+                var label = document.createElement('span');
+                label.className = 'qsel-label';
+                var caret = document.createElement('span');
+                caret.className = 'qsel-caret';
+                caret.textContent = '▾';
+                btn.appendChild(label);
+                btn.appendChild(caret);
+                sel.parentNode.insertBefore(wrap, sel);
+                wrap.appendChild(sel);
+                wrap.appendChild(btn);
+                sel.classList.add('qsel-native');
+                sel.tabIndex = -1;
+                sel._qsel = { wrap: wrap, btn: btn, label: label };
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    if (openState && openState.sel === sel) close();
+                    else open(sel);
+                });
+                btn.addEventListener('keydown', function (e) {
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        open(sel);
+                    }
+                });
+                sel.addEventListener('change', function () { sync(sel); });
+                new MutationObserver(function () { sync(sel); }).observe(sel, { childList: true, subtree: true, attributes: true, characterData: true });
+                sync(sel);
+            }
+            function open(sel) {
+                close();
+                if (sel.disabled) return;
+                var q = sel._qsel;
+                var menu = document.createElement('div');
+                menu.className = 'qsel-menu' + (q.wrap.classList.contains('qsel-glass') ? ' qsel-menu-glass' : '');
+                var items = [];
+                for (var i = 0; i < sel.options.length; i++) {
+                    var o = sel.options[i];
+                    if (o.hidden) continue;
+                    var it = document.createElement('div');
+                    it.className = 'qsel-item' + (i === sel.selectedIndex ? ' is-selected' : '') + (o.disabled ? ' is-disabled' : '');
+                    it.innerHTML = '<span class="tool-lamp"></span><span class="qsel-item-text"></span>';
+                    it.lastChild.textContent = o.text || ' ';
+                    it.setAttribute('data-index', i);
+                    (function (idx, disabled) {
+                        it.addEventListener('mousedown', function (e) { e.preventDefault(); });
+                        it.addEventListener('click', function (e) { e.stopPropagation(); if (!disabled) choose(sel, idx); });
+                        it.addEventListener('mousemove', function () { setActive(items.indexOf(this)); });
+                    })(i, o.disabled);
+                    menu.appendChild(it);
+                    items.push(it);
+                }
+                document.body.appendChild(menu);
+                var r = q.btn.getBoundingClientRect();
+                menu.style.minWidth = Math.max(r.width, 120) + 'px';
+                var mh = menu.offsetHeight;
+                var below = window.innerHeight - r.bottom - 8;
+                var top = (mh <= below || r.top < mh) ? r.bottom + 2 : r.top - mh - 2;
+                menu.style.top = Math.max(4, top) + 'px';
+                menu.style.left = Math.max(4, Math.min(r.left, window.innerWidth - menu.offsetWidth - 4)) + 'px';
+                menu.style.maxHeight = Math.max(120, (mh <= below || r.top < mh) ? below : r.top - 8) + 'px';
+                q.wrap.classList.add('is-open');
+                var startIdx = 0;
+                for (var k = 0; k < items.length; k++) if (+items[k].getAttribute('data-index') === sel.selectedIndex) startIdx = k;
+                openState = { sel: sel, menu: menu, items: items, active: -1, typed: '', typedAt: 0 };
+                setActive(startIdx);
+            }
+            function setActive(k) {
+                if (!openState || k < 0 || k >= openState.items.length) return;
+                if (openState.active >= 0) openState.items[openState.active].classList.remove('is-active');
+                openState.active = k;
+                var it = openState.items[k];
+                it.classList.add('is-active');
+                var m = openState.menu;
+                if (it.offsetTop < m.scrollTop) m.scrollTop = it.offsetTop;
+                else if (it.offsetTop + it.offsetHeight > m.scrollTop + m.clientHeight) m.scrollTop = it.offsetTop + it.offsetHeight - m.clientHeight;
+            }
+            function choose(sel, idx) {
+                close();
+                if (sel.selectedIndex !== idx) {
+                    sel.selectedIndex = idx;
+                    sel.dispatchEvent(new Event('input', { bubbles: true }));
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                sync(sel);
+                if (sel._qsel && sel._qsel.btn.isConnected) sel._qsel.btn.focus();
+            }
+            function close() {
+                if (!openState) return;
+                if (openState.menu.parentNode) openState.menu.parentNode.removeChild(openState.menu);
+                if (openState.sel._qsel) openState.sel._qsel.wrap.classList.remove('is-open');
+                openState = null;
+            }
+            // While a menu is open, the keyboard drives the menu (and nothing else).
+            window.addEventListener('keydown', function (e) {
+                if (!openState) return;
+                var st = openState, n = st.items.length;
+                var handled = true;
+                if (e.key === 'ArrowDown') setActive(Math.min(n - 1, st.active + 1));
+                else if (e.key === 'ArrowUp') setActive(Math.max(0, st.active - 1));
+                else if (e.key === 'Home') setActive(0);
+                else if (e.key === 'End') setActive(n - 1);
+                else if (e.key === 'Enter' || e.key === ' ') {
+                    var it = st.items[st.active];
+                    if (it && !it.classList.contains('is-disabled')) choose(st.sel, +it.getAttribute('data-index'));
+                }
+                else if (e.key === 'Escape' || e.key === 'Tab') { var b = st.sel._qsel.btn; close(); b.focus(); }
+                else if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
+                    var now = Date.now();
+                    st.typed = (now - st.typedAt < 700 ? st.typed : '') + e.key.toLowerCase();
+                    st.typedAt = now;
+                    for (var k = 0; k < n; k++) {
+                        if (st.items[k].textContent.trim().toLowerCase().indexOf(st.typed) === 0) { setActive(k); break; }
+                    }
+                }
+                else handled = false;
+                if (handled) { e.preventDefault(); e.stopPropagation(); }
+            }, true);
+            document.addEventListener('mousedown', function (e) {
+                if (openState && !openState.menu.contains(e.target) && !openState.sel._qsel.btn.contains(e.target)) close();
+            }, true);
+            window.addEventListener('resize', close);
+            document.addEventListener('scroll', function (e) {
+                if (openState && !openState.menu.contains(e.target)) close();
+            }, true);
+
+            // Code that sets select.value / selectedIndex directly updates the button too.
+            ['value', 'selectedIndex'].forEach(function (prop) {
+                var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, prop);
+                if (!d || !d.set) return;
+                Object.defineProperty(HTMLSelectElement.prototype, prop, {
+                    configurable: true,
+                    enumerable: d.enumerable,
+                    get: d.get,
+                    set: function (v) { d.set.call(this, v); if (this._qsel) sync(this); }
+                });
+            });
+
+            function scan(root) {
+                if (root.tagName === 'SELECT') { enhance(root); return; }
+                if (root.querySelectorAll) {
+                    var list = root.querySelectorAll('select');
+                    for (var i = 0; i < list.length; i++) enhance(list[i]);
+                }
+            }
+            scan(document.body);
+            new MutationObserver(function (muts) {
+                muts.forEach(function (m) {
+                    for (var i = 0; i < m.addedNodes.length; i++) {
+                        if (m.addedNodes[i].nodeType === 1) scan(m.addedNodes[i]);
+                    }
+                    if (openState && !openState.sel.isConnected) close();
+                });
+            }).observe(document.body, { childList: true, subtree: true });
+        })();
     </script>
 </body>
 </html>
@@ -6927,6 +7778,185 @@ def _pack_channels(agg):
     return chans
 
 
+# ---------------------------------------------------------------------------
+# Spectrogram (WAV): computed on demand for the visible window only, so it
+# costs nothing unless the spectrogram view is switched on. Recent results are
+# kept in memory; nothing is written to disk.
+# ---------------------------------------------------------------------------
+SPECTRO_MAX_COLS = 4096
+SPECTRO_MAX_ROWS = 1024
+SPECTRO_FLOOR_DB = -100.0
+SPECTRO_CHUNK = 256                 # columns processed per FFT batch (bounds memory)
+_spectro_mem = {}
+_spectro_order = []
+_spectro_lock = threading.Lock()
+
+
+def _spectro_window_len(rate):
+    """Analysis window ≈ 46 ms, as a power of two (2048 at 44.1/48 kHz)."""
+    L = 1024
+    while L < rate * 0.046 and L < 16384:
+        L *= 2
+    return L
+
+
+class _FrameReader(object):
+    """Reads mono analysis frames from a WAV with one open file handle."""
+    def __init__(self, filepath, lay):
+        self.lay = lay
+        self.fh = open(filepath, 'rb')
+        self.simple = lay['block_align'] == lay['channels'] * lay['bits'] // 8
+        self.path = filepath
+
+    def close(self):
+        try:
+            self.fh.close()
+        except Exception:
+            pass
+
+    def read(self, start, count):
+        lay = self.lay
+        n = lay['n_frames']
+        out = np.zeros(count, dtype=np.float32)
+        a, b = max(0, start), min(n, start + count)
+        if b <= a:
+            return out
+        if self.simple:
+            self.fh.seek(lay['data_offset'] + a * lay['block_align'])
+            fr = _decode_frames(lay, self.fh.read((b - a) * lay['block_align']))
+        else:
+            fr = _read_frames(self.path, lay, a, b - a)
+        mono = fr.mean(axis=1) if fr.shape[1] > 1 else fr[:, 0]
+        out[a - start:a - start + len(mono)] = mono
+        return out
+
+
+def _spectro_compute(filepath, lay, sf, ef, cols, rows):
+    """Return (cols, rows) uint8 image of the window [sf, ef) in frames."""
+    rate = float(lay['rate'])
+    L = _spectro_window_len(rate)
+    nfft = L * 2                                  # zero-padded: smoother spectrum between bins
+    win = np.hanning(L).astype(np.float32)
+    scale = 2.0 / win.sum()
+    hop = (ef - sf) / float(cols)
+    # Zoomed out: several FFTs per column, power-averaged, so nothing between
+    # columns is skipped. Bounded so a request stays well under a second.
+    k = int(max(1, min(8, np.floor(hop / L))))
+    while k > 1 and cols * k > 12000:
+        k -= 1
+
+    fmax = rate / 2.0
+    fmin = min(40.0, fmax / 8.0)
+    bin_hz = rate / nfft
+    nb = nfft // 2 + 1
+    # Log-spaced row edges. A row spanning >= 2 FFT bins takes the loudest bin
+    # in it; a row narrower than a bin is interpolated at its centre frequency.
+    edges = np.geomspace(fmin, fmax, rows + 1)
+    lo = np.clip(np.floor(edges[:-1] / bin_hz).astype(int), 0, nb - 1)
+    hi = np.clip(np.ceil(edges[1:] / bin_hz).astype(int), 1, nb)
+    wide = (hi - lo) >= 2
+    centre = np.sqrt(edges[:-1] * edges[1:]) / bin_hz
+    i0 = np.clip(np.floor(centre).astype(int), 0, nb - 2)
+    frac = (centre - i0).astype(np.float32)
+
+    reader = _FrameReader(filepath, lay)
+    try:
+        span_lo = int(sf - L)
+        span_hi = int(ef + L)
+        whole = None
+        if (span_hi - span_lo) * lay['block_align'] <= 96 * 1024 * 1024:
+            whole = reader.read(span_lo, span_hi - span_lo)
+        out = np.empty((cols, rows), dtype=np.uint8)
+        for c0 in range(0, cols, SPECTRO_CHUNK):
+            c1 = min(cols, c0 + SPECTRO_CHUNK)
+            ncol = c1 - c0
+            frames = np.empty((ncol * k, L), dtype=np.float32)
+            for ci in range(ncol):
+                col_start = sf + (c0 + ci) * hop
+                for j in range(k):
+                    centre_f = col_start + (j + 0.5) * hop / k
+                    a = int(round(centre_f)) - L // 2
+                    if whole is not None:
+                        s = a - span_lo
+                        frames[ci * k + j] = whole[s:s + L] if 0 <= s and s + L <= len(whole) else reader.read(a, L)
+                    else:
+                        frames[ci * k + j] = reader.read(a, L)
+            spec = np.abs(np.fft.rfft(frames * win, n=nfft, axis=1)) * scale
+            power = (spec * spec).reshape(ncol, k, nb).mean(axis=1)
+            db_ = 10.0 * np.log10(np.maximum(power, 1e-20))
+            peak = np.maximum.reduceat(db_, lo, axis=1)
+            interp = db_[:, i0] * (1.0 - frac) + db_[:, i0 + 1] * frac
+            vals = np.where(wide[None, :], peak, interp)
+            norm = (vals - SPECTRO_FLOOR_DB) / (0.0 - SPECTRO_FLOOR_DB)
+            out[c0:c1] = (np.clip(norm, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
+        return out, fmin, fmax
+    finally:
+        reader.close()
+
+
+@app.route('/api/audio/<int:file_id>/spectrogram')
+def audio_spectrogram(file_id):
+    """Spectrogram of the window [start, end] (fractions of the file).
+
+    Query params: cols, rows (≈ device pixels of the lane), start, end.
+    Returns JSON: cols, rows, window, fmin, fmax, data (base64 uint8,
+    column-major: data[col * rows + row], row 0 = lowest frequency).
+    """
+    import base64
+    if np is None:
+        return jsonify({'error': 'Spectrogram needs numpy'}), 501
+    file_data = db.get_file(file_id)
+    if not file_data:
+        return jsonify({'error': 'File not found'}), 404
+    filepath = file_data['filepath']
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'Audio file not found on disk'}), 404
+    if os.path.splitext(filepath)[1].lower() not in _WAV_EXTS:
+        return jsonify({'error': 'Spectrogram is available for WAV files'}), 415
+    lay = wav_layout(filepath)
+    if not lay or lay['n_frames'] <= 0:
+        return jsonify({'error': 'Unsupported WAV format'}), 415
+    try:
+        cols = max(16, min(SPECTRO_MAX_COLS, int(request.args.get('cols', 1200))))
+        rows = max(32, min(SPECTRO_MAX_ROWS, int(request.args.get('rows', 256))))
+        start_frac = max(0.0, min(1.0, float(request.args.get('start', 0))))
+        end_frac = max(0.0, min(1.0, float(request.args.get('end', 1))))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Bad parameters'}), 400
+    if end_frac <= start_frac:
+        end_frac = min(1.0, start_frac + 1e-6)
+
+    n = lay['n_frames']
+    sf = int(np.floor(start_frac * n))
+    ef = max(sf + 1, min(n, int(np.ceil(end_frac * n))))
+    try:
+        st = os.stat(filepath)
+        key = (filepath, st.st_mtime_ns, st.st_size, sf, ef, cols, rows)
+    except OSError:
+        key = None
+    if key is not None:
+        with _spectro_lock:
+            hit = _spectro_mem.get(key)
+        if hit is not None:
+            return jsonify(hit)
+    try:
+        img, fmin, fmax = _spectro_compute(filepath, lay, sf, ef, cols, rows)
+    except Exception as e:
+        return jsonify({'error': 'Could not read audio: %s' % e}), 500
+    result = {
+        'cols': cols, 'rows': rows,
+        'window': [sf / float(n), ef / float(n)],
+        'fmin': fmin, 'fmax': fmax,
+        'data': base64.b64encode(img.tobytes()).decode('ascii'),
+    }
+    if key is not None:
+        with _spectro_lock:
+            _spectro_mem[key] = result
+            _spectro_order.append(key)
+            while len(_spectro_order) > 12:
+                _spectro_mem.pop(_spectro_order.pop(0), None)
+    return jsonify(result)
+
 @app.route('/api/audio/<int:file_id>/waveform')
 def audio_waveform(file_id):
     """Waveform data for the visible window.
@@ -7159,6 +8189,22 @@ def _save_settings(updates):
 
 def _remember_last_db(path):
     _save_settings({'last_db': os.path.abspath(path)})
+
+@app.route('/api/settings/shortcuts', methods=['GET', 'POST'])
+def shortcut_settings():
+    """Custom keyboard shortcuts: only the actions you changed are stored."""
+    if request.method == 'POST':
+        data = request.json or {}
+        ov = data.get('overrides', {})
+        if not isinstance(ov, dict):
+            return jsonify({'error': 'overrides must be an object'}), 400
+        clean = {}
+        for k, v in ov.items():
+            if isinstance(k, str) and isinstance(v, list):
+                clean[k[:40]] = [str(x)[:40] for x in v[:4]]
+        _save_settings({'shortcuts': clean})
+        return jsonify({'success': True})
+    return jsonify({'overrides': _load_settings().get('shortcuts', {})})
 
 @app.route('/api/database/current')
 def get_current_database():
@@ -7514,154 +8560,6 @@ def time_to_seconds(time_str):
             return float(time_str)
     except:
         return 0
-
-# =====================================================================
-# Marker export for Pro Tools (Standard MIDI File with marker meta-events)
-# =====================================================================
-# Pro Tools does not read markers embedded in WAV files, but it imports
-# marker meta-events (FF 06) from a MIDI file onto the Markers ruler:
-#   File > Import > MIDI…  (Location: Session Start, tick "Import tempo map").
-# The file is written at 120 BPM / 960 PPQ, so 1 s = 1920 ticks (~0.5 ms
-# resolution) and positions land correctly even if the tempo map isn't imported,
-# as long as the session is at the default 120 BPM.
-
-MIDI_PPQ = 960
-MIDI_TICKS_PER_SEC = MIDI_PPQ * 2          # 120 BPM -> 2 beats per second
-
-
-def _midi_varlen(n):
-    n = max(0, int(n))
-    out = [n & 0x7F]
-    n >>= 7
-    while n:
-        out.insert(0, (n & 0x7F) | 0x80)
-        n >>= 7
-    return bytes(out)
-
-
-def _midi_meta(delta, mtype, payload):
-    return _midi_varlen(delta) + bytes([0xFF, mtype]) + _midi_varlen(len(payload)) + payload
-
-
-def _midi_text(s, limit):
-    # SMF text is conventionally Latin-1; most readers (incl. DAWs) decode it that
-    # way. Fall back to UTF-8 only for characters Latin-1 can't represent.
-    s = s or ''
-    try:
-        b = s.encode('latin-1')
-    except UnicodeEncodeError:
-        b = s.encode('utf-8')
-    return b[:limit]
-
-
-def build_marker_midi(markers, track_name='Earmark markers'):
-    """markers: list of (seconds, name). Returns SMF type-0 bytes."""
-    import struct as _st
-    ev = b''
-    ev += _midi_meta(0, 0x03, _midi_text(track_name, 120))
-    ev += _midi_meta(0, 0x51, (500000).to_bytes(3, 'big'))           # 120 BPM
-    ev += _midi_meta(0, 0x58, bytes([4, 2, 24, 8]))                    # 4/4
-    last = 0
-    for sec, name in sorted(markers, key=lambda m: m[0]):
-        tick = int(round(max(0.0, sec) * MIDI_TICKS_PER_SEC))
-        ev += _midi_meta(tick - last, 0x06, _midi_text(name or 'Marker', 255))
-        last = tick
-    ev += _midi_varlen(0) + b'\xFF\x2F\x00'                            # end of track
-    header = b'MThd' + _st.pack('>IHHH', 6, 0, 1, MIDI_PPQ)
-    return header + b'MTrk' + _st.pack('>I', len(ev)) + ev
-
-
-def _collect_markers_for_midi(file_detail, marker_fields, include_ends):
-    """Gather (seconds, name) pairs from the given markers fields of one file."""
-    out = []
-    prefix = len(marker_fields) > 1
-    for field in marker_fields:
-        raw = file_detail['fields'].get(field['name'], '')
-        try:
-            items = json.loads(raw) if raw else []
-        except Exception:
-            items = []
-        for m in items:
-            label = (m.get('label') or '').strip() or 'Marker'
-            name = (field['name'] + ': ' + label) if prefix else label
-            s = time_to_seconds(m.get('start', '0'))
-            out.append((s, name))
-            if include_ends:
-                e = time_to_seconds(m.get('end', '0'))
-                if e > s:
-                    out.append((e, name + ' (end)'))
-    return out
-
-
-@app.route('/api/export/midi-markers', methods=['POST'])
-def export_midi_markers():
-    """Write one <audio name>_markers.mid per file, next to the audio file
-    (or next to the database if that folder isn't writable).
-
-    JSON body: {file_ids: [...], field_id: <id> | null (= all markers fields),
-                include_ends: bool}
-    """
-    data = request.json or {}
-    file_ids = data.get('file_ids') or []
-    field_id = data.get('field_id')
-    include_ends = bool(data.get('include_ends'))
-
-    marker_fields = [f for f in db.get_fields() if f['type'] == 'markers']
-    if field_id not in (None, '', 'all'):
-        try:
-            fid = int(field_id)
-        except (TypeError, ValueError):
-            fid = None
-        marker_fields = [f for f in marker_fields if f['id'] == fid]
-    if not marker_fields:
-        return jsonify({'success': False, 'error': 'No markers field found.'}), 400
-
-    written, skipped, errors = [], [], []
-    for file_id in file_ids:
-        try:
-            detail = db.get_file(int(file_id))
-        except Exception:
-            detail = None
-        if not detail:
-            continue
-        markers = _collect_markers_for_midi(detail, marker_fields, include_ends)
-        if not markers:
-            skipped.append(detail['filename'])
-            continue
-        stem = os.path.splitext(detail['filename'])[0]
-        payload = build_marker_midi(markers, track_name=stem)
-        targets = [os.path.dirname(os.path.abspath(detail['filepath'])),
-                   os.path.dirname(os.path.abspath(current_db_path))]
-        ok = False
-        for d in targets:
-            out_path = os.path.join(d, stem + '_markers.mid')
-            try:
-                with open(out_path, 'wb') as fh:
-                    fh.write(payload)
-                written.append({'file': detail['filename'], 'path': out_path, 'count': len(markers)})
-                ok = True
-                break
-            except Exception:
-                continue
-        if not ok:
-            errors.append(detail['filename'])
-
-    revealed = False
-    if written:
-        try:
-            import subprocess, sys
-            if sys.platform == 'darwin':
-                subprocess.Popen(['open', '-R', written[0]['path']])
-                revealed = True
-            elif sys.platform.startswith('win'):
-                subprocess.Popen(['explorer', '/select,', written[0]['path']])
-                revealed = True
-        except Exception:
-            pass
-
-    return jsonify({'success': bool(written), 'written': written, 'skipped': skipped,
-                    'errors': errors, 'revealed': revealed})
-
 
 @app.route('/api/export/max')
 def export_for_max():

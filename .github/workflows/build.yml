@@ -41,14 +41,15 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           pyinstaller --noconfirm --windowed --name Earmark \
-            --osx-bundle-identifier uk.stefanodestefano.earmark earmark.py
+            --osx-bundle-identifier uk.stefanodestefano.earmark \
+            --add-data "ui:ui" earmark.py
           ditto -c -k --keepParent dist/Earmark.app "Earmark-${{ matrix.label }}.zip"
 
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --windowed --name Earmark earmark.py
+          pyinstaller --noconfirm --windowed --name Earmark --add-data "ui;ui" earmark.py
           Compress-Archive -Path dist/Earmark -DestinationPath "Earmark-${{ matrix.label }}.zip"
 
       - uses: actions/upload-artifact@v6

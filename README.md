@@ -99,11 +99,35 @@ Files are matched by prefix: `B2213.wav` matches `B2213.txt`, `B2213_transcripti
 ### Console
 Click **Console** for statistics and text analysis, e.g. `stats Quality`, `stats audio`, `wordfreq Transcription 50`. Type `help` for the full list.
 
+### Waveform and spectrogram
+The **WAVE** and **SPECTRO** keys in the transport row choose what the audio lane shows: the waveform, the spectrogram, or both stacked (spectrogram on top). The spectrogram is calculated only for the part of the file on screen, and only while it is switched on, so it adds no load otherwise. It works with WAV files.
+
+### Layout
+- The **audio strip** (waveform and/or spectrogram) runs across the whole window under the toolbar. Drag the bar under it to make it taller or shorter.
+- The **AUDIO · FIELDS · FILES · INFO** keys in the toolbar show or hide each panel (lamp on = shown). Hidden panels give their space to the others.
+- Drag a panel's **title bar** onto another panel to swap their places; drag the gaps between panels to resize them.
+- Earmark remembers your layout between sessions.
+
+### Day and night
+The interface has two themes: **Giorno** (day, the default) and **Notte** (night). Switch with the **Dark / Light** key in the toolbar.
+
 ### Keyboard shortcuts
-Press **?** in the app for the full list. The essentials:
+Press **?** in the app to see every shortcut. Click **Customise** to change them: **+ Key** adds a key combination to an action (press it, or Esc to cancel), **×** removes one, and **Reset to defaults** puts everything back. A key that is already in use moves to the new action. Your shortcuts are saved in `~/.earmark/settings.json`.
+
+The defaults:
 
 | Shortcut | Action |
 |----------|--------|
+| `Space` | Play / pause (or play selection) |
+| `M` | Drop marker |
+| `⌘⇧M` / `⌘⇧,` | Next / previous marker |
+| `S` / `G` | Selector / Grabber tool (also `F7` / `F8`) |
+| `R` / `T` | Zoom in / out |
+| `↑` / `↓` | Previous / next file |
+| `⌘⇧J` / `⌘⇧K` / `⌘⇧L` | Search fields / files / content |
+| `⌘Z` / `⌘⇧Z` | Undo / redo |
+
+----------|--------|
 | `Space` | Play / pause (or play selection) |
 | `M` | Drop marker |
 | `⌘⇧M` / `⌘⇧,` | Next / previous marker |
@@ -141,3 +165,5 @@ Builds are made automatically by GitHub Actions (`.github/workflows/build.yml`) 
 ## License
 
 [MIT](LICENSE) © 2026 Stefano De Stefano
+
+The interface uses the fonts [Archivo](https://github.com/Omnibus-Type/Archivo) and [B612 Mono](https://github.com/polarsys/b612), bundled in `ui/fonts/` under the SIL Open Font License (licence texts included).
