@@ -28,6 +28,14 @@ import time
 import hashlib
 from pathlib import Path
 from datetime import datetime
+import sys
+
+# A windowed app build (PyInstaller --windowed) has no console attached:
+# give print() and Flask's startup messages somewhere harmless to write.
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, 'w')
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, 'w')
 
 # numpy powers the fast (vectorized + cached) waveform path. If it's missing we
 # fall back to the original pure-Python decimation, so the app still runs.
