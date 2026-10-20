@@ -26,9 +26,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -51,7 +51,7 @@ jobs:
           pyinstaller --noconfirm --windowed --name Earmark earmark.py
           Compress-Archive -Path dist/Earmark -DestinationPath "Earmark-${{ matrix.label }}.zip"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: Earmark-${{ matrix.label }}
           path: Earmark-${{ matrix.label }}.zip
@@ -61,7 +61,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: artifacts
           merge-multiple: true
