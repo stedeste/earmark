@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Earmark app icon (Quadro "Cartellino"), fitted to the macOS icon grid:
+       824 px rounded square centred on a 1024 px canvas. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#4d5d53"/>
+  <rect x="106" y="106" width="812" height="812" rx="179" fill="none" stroke="#3a473f" stroke-width="12"/>
+  <g transform="translate(136 109) scale(7.08)">
+    <g transform="translate(50 52) rotate(-24) scale(0.82) translate(-50 -50)">
+      <path fill="#c08a2e" fill-rule="evenodd" d="M38 16 A12 12 0 0 1 62 16 L64 30 L84 42 V88 Q84 94 78 94 H22 Q16 94 16 88 V42 L36 30 Z M45 16 A5 5 0 1 0 55 16 A5 5 0 1 0 45 16 Z"/>
+      <g fill="#1a1c1d">
+        <rect x="24" y="61" width="5" height="10"/><rect x="34" y="53" width="5" height="26"/><rect x="54" y="56" width="5" height="20"/><rect x="64" y="51" width="5" height="30"/><rect x="74" y="60" width="5" height="12"/>
+      </g>
+      <rect fill="#a8321f" x="44" y="46" width="5" height="40"/>
+    </g>
+  </g>
+</svg>

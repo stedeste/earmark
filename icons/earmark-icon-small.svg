@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Small sizes (16-32 px): the simplified favicon mark on the same tile. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#4d5d53"/>
+  <rect x="106" y="106" width="812" height="812" rx="179" fill="none" stroke="#3a473f" stroke-width="12"/>
+  <g transform="translate(88 56) scale(8)">
+    <g transform="translate(50 52) rotate(-24) scale(0.9) translate(-50 -50)">
+      <path fill="#c08a2e" fill-rule="evenodd" d="M38 16 A12 12 0 0 1 62 16 L64 30 L84 42 V88 Q84 94 78 94 H22 Q16 94 16 88 V42 L36 30 Z M44 16 A6 6 0 1 0 56 16 A6 6 0 1 0 44 16 Z"/>
+      <rect fill="#1a1c1d" x="28" y="56" width="9" height="22"/>
+      <rect fill="#a8321f" x="45.5" y="48" width="9" height="38"/>
+      <rect fill="#1a1c1d" x="63" y="59" width="9" height="16"/>
+    </g>
+  </g>
+</svg>

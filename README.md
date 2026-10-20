@@ -1,3 +1,5 @@
+<img src="icons/earmark-icon-256.png" width="96" alt="Earmark icon">
+
 # Earmark
 
 **Audio metadata manager**: tag, annotate, mark up and query collections of audio files.
