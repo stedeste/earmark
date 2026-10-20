@@ -1,0 +1,9 @@
+{
+  "name": "earmark-max",
+  "version": "1.0.0",
+  "description": "Node for Max scripts for querying Earmark databases",
+  "private": true,
+  "dependencies": {
+    "sql.js": "^1.10.0"
+  }
+}
