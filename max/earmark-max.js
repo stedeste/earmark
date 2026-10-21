@@ -1,5 +1,5 @@
 /*
-    earmark-query.js
+    earmark-max.js
     Max/MSP JavaScript for querying Earmark database
     
     Setup in Max:
@@ -8,7 +8,7 @@
               v
         [dict earmark]
         
-        [js earmark-query.js]
+        [js earmark-max.js]
         
     Outlets:
         0 - Main results (lists, counts, data)

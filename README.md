@@ -143,9 +143,7 @@ The defaults:
 
 ## Max/MSP integration
 
-The [`max/`](max/) folder contains scripts for using an Earmark collection inside Max:
-
-- **`earmark-max.js`** (`[js]` object): queries a `[dict]` loaded from **File → Export for Max**.
+Query an Earmark collection from Max: find files by field, tag or text, get markers with their times, and play the results. Download **`Earmark-Max.zip`** from the [latest release](../../releases/latest) and put the `earmark-query` folder in `Documents/Max 9/Packages`. Setup and every message are in [`max/README.md`](max/README.md).
 
 ---
 

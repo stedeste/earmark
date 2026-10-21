@@ -57,9 +57,36 @@ jobs:
           name: Earmark-${{ matrix.label }}
           path: Earmark-${{ matrix.label }}.zip
 
+  max:
+    # The Max package: earmark-query/ ready to drop into Documents/Max 9/Packages,
+    # with the one library it needs (sql.js) already installed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Assemble the package
+        run: |
+          P=pkg/earmark-query
+          mkdir -p "$P/code"
+          cp max/earmark-node.js max/earmark-max.js max/package.json "$P/code/"
+          cp max/README.md LICENSE "$P/"
+          cd "$P/code"
+          npm install --omit=dev --no-audit --no-fund
+          # keep only the parts of sql.js that the script loads
+          find node_modules/sql.js -mindepth 1 -maxdepth 1 ! -name dist ! -name package.json ! -name LICENSE -exec rm -rf {} +
+          find node_modules/sql.js/dist -type f ! -name sql-wasm.js ! -name sql-wasm.wasm -delete
+          rm -f package-lock.json node_modules/.package-lock.json
+          cd ../..
+          zip -r -X Earmark-Max.zip earmark-query
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Earmark-Max
+          path: pkg/Earmark-Max.zip
+
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: build
+    needs: [build, max]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v7
