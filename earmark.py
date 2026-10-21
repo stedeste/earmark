@@ -2821,7 +2821,10 @@ HTML_TEMPLATE = '''
         });
         
         function newDatabase() {
-            qdPrompt('Name of the new database. It is created in your Earmark folder (Documents/Earmark).', 'new_project.db', {title: 'New database', ok: 'Create', mono: true}).then(name => {
+            const ask = nativeDialogs
+                ? pickPath('savedb', 'new_project.db').then(p => p ? p[0] : null)
+                : qdPrompt('Name of the new database. It is created in your Earmark folder (Documents/Earmark).', 'new_project.db', {title: 'New database', ok: 'Create', mono: true});
+            ask.then(name => {
             if (!name) return;
             
             const dbName = name.endsWith('.db') ? name : name + '.db';
@@ -2865,7 +2868,11 @@ HTML_TEMPLATE = '''
         }
         
         function openDatabase() {
-            qdPrompt('Database file: a full path, or just a name for one in Documents/Earmark.', '', {title: 'Open database', ok: 'Open', mono: true, placeholder: 'archive.db  or  /Users/…/archive.db'}).then(path => {
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+            const ask = nativeDialogs
+                ? pickPath('db').then(p => p ? p[0] : null)
+                : qdPrompt('Database file: a full path, or just a name for one in Documents/Earmark.', '', {title: 'Open database', ok: 'Open', mono: true, placeholder: 'archive.db  or  /Users/…/archive.db'});
+            ask.then(path => {
             if (!path) return;
             openDatabasePath(path);
             });
@@ -2909,7 +2916,10 @@ HTML_TEMPLATE = '''
         }
         
         function saveDatabaseAs() {
-            qdPrompt('Save a copy of this database as:', currentDbPath.split('/').pop(), {title: 'Save database as', ok: 'Save', mono: true}).then(name => {
+            const ask = nativeDialogs
+                ? pickPath('savedb', currentDbPath.split('/').pop()).then(p => p ? p[0] : null)
+                : qdPrompt('Save a copy of this database as:', currentDbPath.split('/').pop(), {title: 'Save database as', ok: 'Save', mono: true});
+            ask.then(name => {
             if (!name) return;
             
             const dbName = name.endsWith('.db') ? name : name + '.db';
@@ -3545,6 +3555,8 @@ HTML_TEMPLATE = '''
                 body.appendChild(msg);
             }
             var inputs = {};
+            var err = document.createElement('div');
+            err.className = 'nf-error';
             fields.forEach(function (f, idx) {
                 var id = 'qd-f-' + idx;
                 if (f.type === 'check') {
@@ -3582,11 +3594,40 @@ HTML_TEMPLATE = '''
                     if (f.mono) el.className = 'qd-mono';
                 }
                 el.id = id;
-                body.appendChild(el);
                 inputs[f.name] = el;
+                if (f.browse && nativeDialogs && el.tagName === 'INPUT') {
+                    // [ path box ][ Folder… ][ Files… ]
+                    var row = document.createElement('div');
+                    row.className = 'qd-pathrow';
+                    row.appendChild(el);
+                    el.addEventListener('input', function () { this._paths = null; });
+                    [].concat(f.browse).forEach(function (b) {
+                        var key = document.createElement('button');
+                        key.type = 'button';
+                        key.className = 'btn btn-secondary qd-browse';
+                        key.textContent = b.label;
+                        key.addEventListener('click', function () {
+                            pickPath(b.kind).then(function (paths) {
+                                if (!paths) return;
+                                if (b.kind === 'files') {
+                                    el._paths = paths;
+                                    el.value = paths.length === 1 ? paths[0]
+                                        : paths.length + ' files: ' + paths.slice(0, 3).map(baseName).join(', ') + (paths.length > 3 ? ' …' : '');
+                                } else {
+                                    el._paths = null;
+                                    el.value = paths[0];
+                                }
+                                if (typeof f.onPick === 'function') f.onPick(b.kind, paths, inputs);
+                                err.style.display = 'none';
+                            });
+                        });
+                        row.appendChild(key);
+                    });
+                    body.appendChild(row);
+                } else {
+                    body.appendChild(el);
+                }
             });
-            var err = document.createElement('div');
-            err.className = 'nf-error';
             body.appendChild(err);
             var keys = document.createElement('div');
             keys.className = 'qd-dialog-keys';
@@ -3610,6 +3651,7 @@ HTML_TEMPLATE = '''
                 fields.forEach(function (f) {
                     var el = inputs[f.name];
                     v[f.name] = f.type === 'check' ? el.checked : el.value;
+                    if (el._paths) v[f.name + 'Paths'] = el._paths;
                 });
                 return v;
             }
@@ -3645,6 +3687,24 @@ HTML_TEMPLATE = '''
                 else okBtn.focus();
             }, 0);
         }
+        // Native Finder / Explorer dialogs, when Earmark runs in its own window.
+        var nativeDialogs = false;
+        fetch('/api/dialog').then(function (r) { return r.json(); })
+            .then(function (d) { nativeDialogs = !!(d && d.available); }).catch(function () {});
+        function pickPath(kind, filename) {
+            return fetch('/api/dialog', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({kind: kind, filename: filename || ''})
+            }).then(function (r) { return r.json(); })
+              .then(function (d) {
+                  if (d && d.error) { alert('Could not open the file dialog: ' + d.error); return null; }
+                  return (d && d.paths && d.paths.length) ? d.paths : null;
+              })
+              .catch(function () { return null; });
+        }
+        function baseName(p) { return String(p).split(/[\\\\/]/).pop(); }
+
         function qdAlert(message, opts) {
             opts = opts || {};
             return qdDialog({ title: opts.title || 'Earmark', message: String(message), ok: 'OK', cancel: null });
@@ -6160,19 +6220,23 @@ function updatePlayerMarkers() {
             qdDialog({
                 title: 'Import audio',
                 fields: [
-                    {name: 'path', label: 'Folder with audio files', type: 'text', mono: true, placeholder: '/Users/…/Recordings'},
-                    {name: 'recursive', label: 'Include subfolders', type: 'check', value: true}
+                    {name: 'path', label: nativeDialogs ? 'Folder or audio files' : 'Folder with audio files', type: 'text', mono: true, placeholder: '/Users/…/Recordings',
+                     browse: [{kind: 'folder', label: 'Folder…'}, {kind: 'files', label: 'Files…'}]},
+                    {name: 'recursive', label: 'Include subfolders (when importing a folder)', type: 'check', value: true}
                 ],
                 ok: 'Import',
-                validate: v => v.path.trim() ? null : 'Enter a folder path.'
+                validate: v => (v.pathPaths || v.path.trim()) ? null : (nativeDialogs ? 'Choose a folder or files, or type a folder path.' : 'Enter a folder path.')
             }).then(v => {
                 if (!v) return;
+                const body = v.pathPaths ? {paths: v.pathPaths} : {path: v.path.trim(), recursive: v.recursive};
                 fetch('/api/import', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({path: v.path.trim(), recursive: v.recursive})
+                    body: JSON.stringify(body)
                 }).then(r => r.json()).then(result => {
-                    qdNotice(`Imported ${result.imported} file(s)`);
+                    let msg = `Imported ${result.imported} file(s)`;
+                    if (result.skipped) msg += ` · ${result.skipped} already in the database`;
+                    qdNotice(msg);
                     loadFiles();
                 });
             });
@@ -6183,7 +6247,8 @@ function updatePlayerMarkers() {
                 title: 'Link metadata files',
                 message: 'Files are matched to audio by name: rec_001.wav ↔ rec_001.txt, rec_001_pitch.csv …',
                 fields: [
-                    {name: 'path', label: 'Folder with metadata files (.txt, .TextGrid, .csv …)', type: 'text', mono: true, placeholder: '/Users/…/Transcriptions'},
+                    {name: 'path', label: 'Folder with metadata files (.txt, .TextGrid, .csv …)', type: 'text', mono: true, placeholder: '/Users/…/Transcriptions',
+                     browse: [{kind: 'folder', label: 'Folder…'}]},
                     {name: 'fieldName', label: 'Field name', type: 'text', placeholder: 'Transcription, Formants, PitchTrack …'},
                     {name: 'recursive', label: 'Include subfolders', type: 'check', value: true}
                 ],
@@ -7291,24 +7356,104 @@ def import_file_metadata_route():
     })
 
 
+# ---------------------------------------------------------------------------
+# Native file dialogs (Finder / Explorer), opened by the app window.
+# Not available when Earmark runs in a normal browser: the page then keeps
+# its typed-path boxes.
+# ---------------------------------------------------------------------------
+_ui_window = None
+AUDIO_EXTENSIONS = ['.wav', '.mp3', '.m4a', '.flac', '.aiff', '.aif', '.ogg', '.wave', '.bwf']
+
+
+@app.route('/api/dialog', methods=['GET', 'POST'])
+def native_dialog():
+    """GET: are native dialogs available?  POST {kind, filename?}: open one.
+
+    kind: 'folder' (choose a folder), 'files' (one or more audio files),
+          'db' (open a .db), 'savedb' (save-as a .db, filename = suggestion).
+    Returns {available, paths: [...]}; paths is empty if cancelled.
+    """
+    if _ui_window is None:
+        return jsonify({'available': False, 'paths': []})
+    if request.method == 'GET':
+        return jsonify({'available': True})
+    import webview
+    data = request.json or {}
+    kind = data.get('kind', 'folder')
+    FD = getattr(webview, 'FileDialog', None)
+    FOLDER = FD.FOLDER if FD else webview.FOLDER_DIALOG
+    OPEN = FD.OPEN if FD else webview.OPEN_DIALOG
+    SAVE = FD.SAVE if FD else webview.SAVE_DIALOG
+
+    dirs = _load_settings().get('dialog_dirs', {})
+    if kind in ('db', 'savedb'):
+        start = dirs.get(kind) or os.path.dirname(os.path.abspath(current_db_path)) or DATA_DIR
+    else:
+        start = dirs.get(kind) or os.path.expanduser('~')
+    if not os.path.isdir(start):
+        start = os.path.expanduser('~')
+
+    try:
+        if kind == 'folder':
+            res = _ui_window.create_file_dialog(FOLDER, directory=start)
+        elif kind == 'files':
+            pattern = ';'.join('*' + e for e in AUDIO_EXTENSIONS)
+            res = _ui_window.create_file_dialog(OPEN, directory=start, allow_multiple=True,
+                                                file_types=('Audio files (%s)' % pattern, 'All files (*.*)'))
+        elif kind == 'db':
+            res = _ui_window.create_file_dialog(OPEN, directory=start,
+                                                file_types=('Earmark database (*.db)', 'All files (*.*)'))
+        elif kind == 'savedb':
+            name = os.path.basename(data.get('filename') or 'archive.db')
+            res = _ui_window.create_file_dialog(SAVE, directory=start, save_filename=name)
+        else:
+            return jsonify({'available': True, 'paths': [], 'error': 'Unknown dialog: ' + str(kind)}), 400
+    except Exception as e:
+        return jsonify({'available': True, 'paths': [], 'error': str(e)}), 500
+
+    if not res:
+        paths = []
+    elif isinstance(res, str):
+        paths = [res]
+    else:
+        paths = [str(x) for x in res]
+    if paths:
+        first = paths[0]
+        remember = first if kind == 'folder' else os.path.dirname(first)
+        dirs[kind] = remember
+        _save_settings({'dialog_dirs': dirs})
+    return jsonify({'available': True, 'paths': paths})
+
+
 @app.route('/api/import', methods=['POST'])
 def import_files():
-    folder_path = request.json['path']
-    recursive = request.json.get('recursive', False)
-    audio_extensions = ['.wav', '.mp3', '.m4a', '.flac', '.aiff', '.ogg']
-    
+    """Import audio: a folder ({path, recursive}) or a list of files ({paths})."""
+    data = request.json or {}
     imported = 0
-    
+    skipped = 0
+
+    files = data.get('paths')
+    if files:
+        for f in files:
+            fp = Path(f)
+            if fp.is_file() and fp.suffix.lower() in AUDIO_EXTENSIONS:
+                if db.add_file(str(fp)):
+                    imported += 1
+                else:
+                    skipped += 1       # already in the database
+        return jsonify({'imported': imported, 'skipped': skipped})
+
+    folder_path = data.get('path', '')
+    recursive = data.get('recursive', False)
     # Use ** for recursive, * for single folder
     pattern = '**/*' if recursive else '*'
-    
     for file in Path(folder_path).glob(pattern):
-        if file.is_file() and file.suffix.lower() in audio_extensions:
-            file_id = db.add_file(str(file))
-            if file_id:
+        if file.is_file() and file.suffix.lower() in AUDIO_EXTENSIONS:
+            if db.add_file(str(file)):
                 imported += 1
-    
-    return jsonify({'imported': imported})
+            else:
+                skipped += 1
+    return jsonify({'imported': imported, 'skipped': skipped})
 
 @app.route('/api/link-metadata', methods=['POST'])
 def link_metadata_files():
@@ -9506,7 +9651,7 @@ if __name__ == '__main__':
             print("   (Close the window to quit)\n")
             
             # Create native window
-            webview.create_window(
+            _ui_window = webview.create_window(
                 'Earmark',
                 URL,
                 width=1400,

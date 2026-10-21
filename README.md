@@ -68,7 +68,7 @@ Earmark remembers the last database you opened and reopens it on launch. App set
 
 Audio files are **never copied or modified**. Earmark only stores their paths, so if you move your audio, re-import it.
 
-A database can live anywhere, for example in the folder with its audio: give a full path in **File → Save Database As…**, **New Database…** or **Open Database…**.
+A database can live anywhere, for example in the folder with its audio: **File → Save Database As…**, **New Database…** and **Open Database…** open the normal Finder dialogs.
 
 **Exports** (File → Export to CSV / Excel / Export for Max, and **⌘S** to save the project as JSON) are written next to the current database, named after it (`archive_export.csv`, `archive_max.json` …), and shown in Finder.
 
@@ -77,7 +77,7 @@ A database can live anywhere, for example in the folder with its audio: give a f
 ## How to use
 
 ### Importing audio
-Click **Import Audio**, enter a folder path and choose whether to include subfolders.
+Click **Import Audio**, then **Folder…** to pick a folder (optionally with its subfolders) or **Files…** to pick individual audio files in Finder. You can also type or paste a folder path. Files already in the database are skipped.
 
 ### Fields
 In the left panel, click **+ New** and choose a type:

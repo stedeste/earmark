@@ -927,3 +927,8 @@ body { background: var(--cemento); }
     transition: opacity 0.4s ease, transform 0.4s ease;
 }
 .qd-notice.is-leaving { opacity: 0; transform: translateY(6px); }
+
+/* Path box with Choose… keys (native Finder / Explorer dialogs) */
+.qd-pathrow { display: flex; align-items: flex-start; gap: 6px; }
+.qd-pathrow input { flex: 1; min-width: 0; }
+.btn.qd-browse { flex: none; padding: 6px 10px; margin: 0 0 2px; white-space: nowrap; }
