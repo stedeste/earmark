@@ -2932,26 +2932,23 @@ HTML_TEMPLATE = '''
             });
         }
         
-        function exportToCSV() {
-            window.location.href = '/api/export/csv';
-        }
-
-        function exportToExcel() {
-            // The desktop (pywebview) window can't do browser-style downloads, so the
-            // server writes the file to disk (next to the database) and reveals it in
-            // Finder. We just report where it landed.
-            fetch('/api/export/xlsx/save', { method: 'POST' })
-                .then(r => r.json())
-                .then(res => {
-                    if (res.success) {
-                        alert('Excel file saved to:\\n' + res.path +
-                              (res.revealed ? '\\n\\n(Revealed in Finder.)' : ''));
-                    } else {
-                        alert('Could not export to Excel: ' + (res.error || 'unknown error'));
-                    }
+        // Exports are written next to the current database and shown in Finder
+        // (the desktop window can't do browser-style downloads).
+        function saveExport(kind, what) {
+            document.querySelectorAll('.dropdown-menu').forEach(function (m) { m.classList.remove('show'); });
+            var req = kind === 'xlsx'
+                ? fetch('/api/export/xlsx/save', { method: 'POST' })
+                : fetch('/api/export/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({kind: kind}) });
+            req.then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (res.success) qdNotice(what + ' saved:\\n' + res.path);
+                    else alert('Could not save the ' + what.toLowerCase() + ': ' + (res.error || 'unknown error'));
                 })
-                .catch(err => alert('Could not export to Excel: ' + err.message));
+                .catch(function (err) { alert('Could not save the ' + what.toLowerCase() + ': ' + err.message); });
         }
+        function exportToCSV() { saveExport('csv', 'CSV export'); }
+
+        function exportToExcel() { saveExport('xlsx', 'Excel export'); }
 
         // Playback speed
         function changePlaybackSpeed(speed) {
@@ -6184,7 +6181,7 @@ function updatePlayerMarkers() {
         function linkMetadataFiles() {
             qdDialog({
                 title: 'Link metadata files',
-                message: 'Files are matched to audio by name: B2213.wav ↔ B2213.txt, B2213_pitch.csv …',
+                message: 'Files are matched to audio by name: rec_001.wav ↔ rec_001.txt, rec_001_pitch.csv …',
                 fields: [
                     {name: 'path', label: 'Folder with metadata files (.txt, .TextGrid, .csv …)', type: 'text', mono: true, placeholder: '/Users/…/Transcriptions'},
                     {name: 'fieldName', label: 'Field name', type: 'text', placeholder: 'Transcription, Formants, PitchTrack …'},
@@ -6716,31 +6713,9 @@ function updatePlayerMarkers() {
             loadFiles(); // Reset to show all files
         }
         
-        function saveProject() {
-            fetch('/api/export')
-                .then(r => r.blob())
-                .then(blob => {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'earmark-export.json';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                });
-        }
-        
-        function exportForMax() {
-            fetch('/api/export/max')
-                .then(r => r.blob())
-                .then(blob => {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'earmark-max.json';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                });
-        }
+        function saveProject() { saveExport('json', 'Project export'); }
+
+        function exportForMax() { saveExport('max', 'Max export'); }
 
         // ---- Quadro dropdowns ----
         // Native <select> menus open as the system pop-up, which can't be styled.
@@ -7339,7 +7314,7 @@ def import_files():
 def link_metadata_files():
     """Link metadata files to audio files by matching prefixes.
     
-    Example: B2213.wav will match B2213_transcription.txt, B2213_pitchtrack.csv, etc.
+    Example: rec_001.wav will match rec_001_transcription.txt, rec_001_pitchtrack.csv, etc.
     """
     folder_path = request.json['path']
     field_name = request.json['fieldName']
@@ -8509,9 +8484,15 @@ def export_xlsx_save():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+    return _save_export_next_to_db(data, '_export.xlsx')
+
+
+def _save_export_next_to_db(data, suffix):
+    """Write export bytes next to the current database as <db name><suffix>,
+    reveal the file in Finder / Explorer, and report where it went."""
     out_dir = os.path.dirname(os.path.abspath(current_db_path)) or '.'
     base = os.path.splitext(os.path.basename(current_db_path))[0] or 'earmark'
-    out_path = os.path.join(out_dir, base + '_export.xlsx')
+    out_path = os.path.join(out_dir, base + suffix)
     try:
         with open(out_path, 'wb') as f:
             f.write(data)
@@ -8520,7 +8501,7 @@ def export_xlsx_save():
 
     revealed = False
     try:
-        import subprocess, sys
+        import subprocess
         if sys.platform == 'darwin':
             subprocess.Popen(['open', '-R', out_path])
             revealed = True
@@ -8531,6 +8512,25 @@ def export_xlsx_save():
         pass
 
     return jsonify({'success': True, 'path': out_path, 'revealed': revealed})
+
+
+@app.route('/api/export/save', methods=['POST'])
+def export_save():
+    """Save the JSON / Max / CSV export as a file next to the current database.
+    (The desktop window can't do browser-style downloads.)"""
+    kind = (request.json or {}).get('kind', '')
+    try:
+        if kind == 'json':
+            data, suffix = export_data().get_data(), '_export.json'
+        elif kind == 'max':
+            data, suffix = export_for_max().get_data(), '_max.json'
+        elif kind == 'csv':
+            data, suffix = export_csv().get_data(), '_export.csv'
+        else:
+            return jsonify({'success': False, 'error': 'Unknown export: ' + str(kind)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+    return _save_export_next_to_db(data, suffix)
 
 @app.route('/api/export')
 def export_data():

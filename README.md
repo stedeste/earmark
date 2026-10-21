@@ -68,6 +68,10 @@ Earmark remembers the last database you opened and reopens it on launch. App set
 
 Audio files are **never copied or modified**. Earmark only stores their paths, so if you move your audio, re-import it.
 
+A database can live anywhere, for example in the folder with its audio: give a full path in **File → Save Database As…**, **New Database…** or **Open Database…**.
+
+**Exports** (File → Export to CSV / Excel / Export for Max, and **⌘S** to save the project as JSON) are written next to the current database, named after it (`archive_export.csv`, `archive_max.json` …), and shown in Finder.
+
 ---
 
 ## How to use
@@ -90,7 +94,7 @@ In the left panel, click **+ New** and choose a type:
 
 ### Linking metadata files
 Click **Link Metadata**, enter the folder that holds your metadata files, and name the field (e.g. "Transcription").
-Files are matched by prefix: `B2213.wav` matches `B2213.txt`, `B2213_transcription.txt`, `B2213_pitch.csv`, and so on.
+Files are matched by prefix: `rec_001.wav` matches `rec_001.txt`, `rec_001_transcription.txt`, `rec_001_pitch.csv`, and so on.
 
 ### Markers
 - Press **M** while playing to drop a marker at the playhead (or across the current selection)

@@ -68,11 +68,11 @@ What comes out of the outlet (route on the first word):
 
 ### earmark-max.js
 
-1. In Earmark: **File → Export for Max** saves `earmark-max.json`.
+1. In Earmark: **File → Export for Max** saves `<database>_max.json` in the same folder as the database (e.g. `Documents/Earmark/earmark_max.json`) and shows it in Finder. The name stays the same each time, so the patch below always reads the latest export.
 2. In Max:
 
 ```
-[loadmess read /path/to/earmark-max.json(
+[loadmess read /Users/you/Documents/Earmark/earmark_max.json(
 |
 [dict earmark]
 

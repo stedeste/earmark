@@ -1,6 +1,13 @@
-import os, re, json, requests, sys
+"""Bulk-import markers into Earmark from transcription .txt files.
+
+Usage: python3 batchmark.py FOLDER [--prefix LABEL] [--port 5000]
+"""
+import os, re, json, argparse
+
+import requests
 
 BASE = "http://127.0.0.1:5000"
+PREFIX = "LABEL"
 COLORS = ["Yellow", "Blue", "Green", "Red", "Purple", "Pink", "Orange", "Cyan"]
 
 def parse_transcription(filepath):
@@ -8,10 +15,10 @@ def parse_transcription(filepath):
     with open(filepath, encoding="utf-8") as f:
         text = f.read()
     blocks = re.findall(
-        r'\[\d+\]\s+(\d+:\d+\.\d+)\s*→\s*(\d+:\d+\.\d+)\s*\n\s*CIM:\s*(.+)',
+        r'\[\d+\]\s+(\d+:\d+\.\d+)\s*→\s*(\d+:\d+\.\d+)\s*\n\s*' + re.escape(PREFIX) + r':\s*(.+)',
         text
     )
-    for i, (start, end, cim_line) in enumerate(blocks):
+    for i, (start, end, label_line) in enumerate(blocks):
         def to_hhmmss(t):
             parts = t.split(":")
             if len(parts) == 2:
@@ -20,7 +27,7 @@ def parse_transcription(filepath):
         markers.append({
             "start": to_hhmmss(start),
             "end": to_hhmmss(end),
-            "label": cim_line.strip(),
+            "label": label_line.strip(),
             "color": COLORS[i % len(COLORS)]
         })
     return markers
@@ -77,6 +84,12 @@ def batch_import(folder):
     print(f"\nDone: {matched} matched, {skipped} skipped")
 
 if __name__ == "__main__":
-    folder = sys.argv[1] if len(sys.argv) > 1 else "."
-    print(f"Scanning: {folder}")
-    batch_import(folder)
+    ap = argparse.ArgumentParser(description="Bulk-import markers into Earmark from transcription .txt files.")
+    ap.add_argument("folder", nargs="?", default=".", help="folder with the .txt files")
+    ap.add_argument("--prefix", default=PREFIX, help="word before the colon on each label line (default: LABEL)")
+    ap.add_argument("--port", type=int, default=5000, help="port Earmark is running on (default: 5000)")
+    args = ap.parse_args()
+    PREFIX = args.prefix
+    BASE = "http://127.0.0.1:%d" % args.port
+    print(f"Scanning: {args.folder}  (label lines start with '{PREFIX}:')")
+    batch_import(args.folder)
