@@ -26,3 +26,7 @@ node_modules/
 # OS / tools
 .DS_Store
 .claude/
+
+# Plugins: code only (models and environments are downloaded by each install script)
+plugins/*/classes.txt
+plugins/*/env/

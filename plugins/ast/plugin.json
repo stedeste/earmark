@@ -1,0 +1,21 @@
+{
+  "contract": 1,
+  "id": "ast",
+  "name": "AST",
+  "version": "1.0",
+  "description": "527 AudioSet sound categories (Audio Spectrogram Transformer). Can discover what it hears.",
+  "license": "Plugin code MIT. Model: MIT/ast-finetuned-audioset-10-10-0.4593 (see its Hugging Face page for the model licence).",
+  "python": "~/.earmark/clap-env/bin/python",
+  "run": ["{python}", "-u", "run.py"],
+  "query": {
+    "kind": "classes",
+    "separator": ";",
+    "discover": true,
+    "classes_file": "classes.txt",
+    "placeholder": "voice=Speech|Conversation; duck=Duck|Quack   (or leave empty)",
+    "help": "AudioSet categories, separated by ; : label=Category|Category@probability#colour (e.g. voice=Speech|Conversation@0.5). Leave empty to discover what AST hears (strongest 8 categories)."
+  },
+  "windows": { "choices": [1, 2], "default": 1, "hop_ratio": 0.5 },
+  "score": { "kind": "probability", "default_threshold": 0.25 },
+  "options": []
+}

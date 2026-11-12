@@ -1,0 +1,5 @@
+Plugin code (run.py, server.py and the scripts in this folder): MIT License,
+same as Earmark.
+
+The model is downloaded separately from Hugging Face by install.sh and is
+covered by its own licence; see the model's page (named in plugin.json).

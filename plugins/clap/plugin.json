@@ -1,0 +1,43 @@
+{
+  "contract": 1,
+  "id": "clap",
+  "name": "CLAP",
+  "version": "1.0",
+  "description": "Free-text sound search with LAION CLAP: describe any sound in words.",
+  "license": "Plugin code MIT. Model: laion/larger_clap_general (see its Hugging Face page for the model licence).",
+  "python": "~/.earmark/clap-env/bin/python",
+  "run": [
+    "{python}",
+    "-u",
+    "run.py"
+  ],
+  "server": [
+    "{python}",
+    "-u",
+    "server.py"
+  ],
+  "query": {
+    "kind": "text",
+    "separator": ",",
+    "discover": false,
+    "placeholder": "duck, sheep#grey, voice=voice|voices@0.18",
+    "help": "Free text, comma-separated: label=phrase|phrase@threshold#colour (e.g. bird=birdsong|bird call@0.17#red). Default threshold 0.22."
+  },
+  "windows": {
+    "choices": [
+      1,
+      2
+    ],
+    "default": 1,
+    "hop_ratio": 0.5
+  },
+  "score": {
+    "kind": "similarity",
+    "default_threshold": 0.22
+  },
+  "options": [],
+  "similar": {
+    "method": "live",
+    "default_threshold": null
+  }
+}

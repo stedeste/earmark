@@ -30,6 +30,23 @@ from pathlib import Path
 from datetime import datetime
 import sys
 
+# Plugins that need only Earmark's own Python ("python": "{earmark_python}") run through
+# the Earmark program itself when it is a built app:  Earmark --run-plugin-script run.py ...
+if len(sys.argv) > 2 and sys.argv[1] == '--run-plugin-script':
+    import runpy
+    import argparse, math, struct, subprocess, wave   # noqa: F401  (bundled into the app for plugins)
+    for _fd, _name in ((1, 'stdout'), (2, 'stderr')):
+        if getattr(sys, _name) is None:
+            try:
+                setattr(sys, _name, os.fdopen(_fd, 'w', buffering=1))
+            except OSError:
+                setattr(sys, _name, open(os.devnull, 'w'))
+    _script = os.path.abspath(sys.argv[2])
+    sys.argv = sys.argv[2:]
+    sys.path.insert(0, os.path.dirname(_script))
+    runpy.run_path(_script, run_name='__main__')
+    sys.exit(0)
+
 # A windowed app build (PyInstaller --windowed) has no console attached:
 # give print() and Flask's startup messages somewhere harmless to write.
 if sys.stdout is None:
@@ -1415,7 +1432,7 @@ HTML_TEMPLATE = '''
             border-radius: 8px;
             padding: 8px;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 4px;
             z-index: 1000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -1658,6 +1675,49 @@ HTML_TEMPLATE = '''
             color: var(--text-secondary);
             margin-top: 8px;
         }
+        #time-ruler { display: block; height: 18px; margin: 8px 2px 0; cursor: pointer; }
+        .wave-strip #time-ruler + .player-progress-container { margin-top: 0; }
+        .wave-strip #lane-strip + .player-progress-container { margin-top: 0; }
+        #lane-strip { position: relative; margin: 0 2px; background: var(--intonaco); user-select: none; }
+        #lane-strip .lane-row { position: relative; height: 18px; border-top: 1px solid var(--rule-soft); overflow: hidden; }
+        #lane-strip .lane-row:last-child { border-bottom: 1px solid var(--rule-soft); }
+        #lane-strip .lane-row.collapsed { height: 9px; }
+        #lane-strip .lane-row.drop { background: var(--ardesia-tint); }
+        #lane-strip .lane-name { position: absolute; right: 2px; top: 1px; z-index: 3; font-size: 9px; line-height: 14px;
+                                 padding: 0 4px; background: var(--calce); border: 1px solid var(--rule-soft); cursor: pointer; opacity: 0.92; }
+        #lane-strip .lane-row.collapsed .lane-name { top: 0; line-height: 7px; font-size: 7px; }
+        #lane-strip .lane-mk { position: absolute; top: 2px; bottom: 2px; border-left: 2px solid; box-sizing: border-box;
+                               font-size: 9px; line-height: 14px; padding: 0 3px; overflow: hidden; white-space: nowrap; cursor: grab; }
+        #lane-strip .lane-mk.selected { outline: 2px solid var(--rule); outline-offset: -1px; z-index: 2; }
+        #lane-strip .lane-mk .lh { position: absolute; top: 0; bottom: 0; width: 5px; cursor: ew-resize; }
+        #player-markers.mode-shade .player-marker-label { display: none; }
+        #player-markers.mode-off { display: none; }
+        .fi-fold { cursor: pointer; color: var(--grafite); font-size: 11px; line-height: 18px; width: 10px; display: inline-block; }
+        .field-item.folded { opacity: 0.6; }
+        #metadata-panel .mf-wrap > .form-group > label { cursor: pointer; }
+        #metadata-panel .mf-wrap > .form-group > label::before { content: '▾  '; color: var(--grafite); font-size: 10px; }
+        #metadata-panel .mf-wrap.collapsed > .form-group > label::before { content: '▸  '; }
+        #metadata-panel .mf-wrap.collapsed > .form-group > *:not(label) { display: none !important; }
+        #metadata-panel .mf-wrap.collapsed > .form-group { margin-bottom: 4px; opacity: 0.7; }
+        #lane-box { position: fixed; border: 1px dashed var(--rule); background: rgba(47, 74, 92, 0.12); pointer-events: none; z-index: 900; }
+        #clap-panel.folded #clap-panel-body { display: none !important; }
+        #clap-panel .linked-file-panel-header { cursor: move; }
+        .color-picker-custom { display: flex; align-items: center; justify-content: center; font-weight: 700; position: relative;
+                               background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); color: #fff; overflow: hidden; }
+        .color-picker-custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        #clap-scores { margin: 0 2px; border: 1px solid var(--rule-soft); border-top: 0; background: var(--calce); }
+        .clap-scores-bar { display: flex; gap: 6px; align-items: center; padding: 3px 6px; font-size: 10px; }
+        .clap-scores-title { font-weight: 700; letter-spacing: 0.06em; color: var(--grafite); }
+        .clap-scores-thr, .clap-scores-hint { font-family: var(--font-mono); color: var(--grafite); }
+        .clap-chip { font-size: 10px; padding: 1px 7px; border: 2px solid var(--rule-soft); background: transparent;
+                     color: var(--inchiostro); cursor: pointer; border-radius: 2px; margin-right: 3px; }
+        #clap-scores-canvas { display: block; height: 80px; cursor: ns-resize; }
+        .clap-chip small { font-size: 8px; opacity: 0.8; margin-left: 3px; }
+        .clap-chip.try { border-style: dashed; }
+        .clap-chip.preview { font-style: italic; }
+        #player-markers .player-marker-label { pointer-events: auto; cursor: grab; }
+        #player-markers .player-marker.selected { box-shadow: inset 0 0 0 2px var(--rule); z-index: 4; }
+        #player-markers .player-marker.selected .player-marker-label { outline: 2px solid var(--rule); }
     </style>
     <link rel="stylesheet" href="/ui/quadro.css?v=1">
 </head>
@@ -1752,6 +1812,67 @@ HTML_TEMPLATE = '''
         <div class="linked-file-panel-path" id="linked-file-path"></div>
         <div class="linked-file-panel-content" id="linked-file-content">Loading…</div>
         <div class="linked-file-panel-resize" id="linked-file-resize" title="Drag to resize"></div>
+    </div>
+
+    <div class="linked-file-panel" id="clap-panel" style="display:none; top: 90px; left: auto; right: 40px; width: 480px; height: auto; min-height: 0;">
+        <div class="linked-file-panel-header">
+            <div class="linked-file-panel-title" id="clap-title">Detect</div>
+            <button class="linked-file-panel-close" onclick="toggleClapPanelBody()" title="Fold / unfold the panel" id="clap-fold-btn">&#8211;</button>
+            <button class="linked-file-panel-close" onclick="closeClapmark()" title="Close">&#215;</button>
+        </div>
+        <div id="clap-panel-body" style="padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <label style="font-size: 11px;">Engine</label>
+                <select id="clap-engine" onchange="clapEngineChanged()"></select>
+                <span id="clap-plugin-info" style="font-size: 10px; color: var(--grafite); flex: 1;"></span>
+            </div>
+            <textarea id="clap-words" rows="3" style="width: 100%; box-sizing: border-box; font-family: inherit; font-size: 12px;"></textarea>
+            <div id="clap-hint" style="font-size: 10px; color: var(--grafite);"></div>
+            <div id="clap-opts" style="display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 11px;"></div>
+            <div id="clap-try-box" style="display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--rule-soft); padding-top: 8px;">
+                <div style="font-size: 11px; font-weight: 600;">Try phrasings live <span style="font-weight: 400; color: var(--grafite);">(curve appears as you type; Enter keeps it to compare)</span></div>
+                <div style="display: flex; gap: 6px;">
+                    <input type="text" id="clap-try-label" placeholder="label, e.g. duck" style="width: 100px; font-size: 12px;">
+                    <input type="text" id="clap-try-phrase" placeholder="phrase sent to the model as written, e.g. a duck quacking nearby" style="flex: 1; font-size: 12px;"
+                        oninput="clapTryInput()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); clapTryKeep(); }">
+                    <button class="btn btn-small" onclick="clapTryKeep()" title="Keep this curve to compare (Enter)">Keep</button>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <div id="clap-try-status" style="font-size: 10px; color: var(--grafite); min-height: 12px; flex: 1;"></div>
+                    <button class="btn btn-small" id="clap-try-analyse" style="display: none;" onclick="clapLiveAnalyse()">Analyse this file</button>
+                </div>
+            </div>
+            <div id="clap-sim-box" style="display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--rule-soft); padding-top: 8px;">
+                <div style="font-size: 11px; font-weight: 600;">Find similar <span style="font-weight: 400; color: var(--grafite);">(examples: the selected markers, or the selected range; several examples work better)</span></div>
+                <div style="display: flex; gap: 6px;">
+                    <input type="text" id="clap-sim-label" placeholder="label for the results, e.g. crow" style="flex: 1; font-size: 12px;"
+                        onkeydown="if (event.key === 'Enter') { event.preventDefault(); clapFindSimilar(); }">
+                    <button class="btn btn-small" onclick="clapFindSimilar()" title="Every installed model that can do it adds a curve to the score strip">Find similar</button>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <div id="clap-sim-status" style="font-size: 10px; color: var(--grafite); min-height: 12px; flex: 1; white-space: pre-wrap;"></div>
+                    <button class="btn btn-small" id="clap-sim-analyse" style="display: none;" onclick="clapSimAnalyse()">Analyse</button>
+                </div>
+            </div>
+            <label style="font-size: 11px; display: flex; gap: 6px; align-items: center;">
+                <input type="checkbox" id="clap-sel"> <span id="clap-sel-label">Only the selection</span>
+            </label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <label style="font-size: 11px;">Window</label>
+                <select id="clap-win"></select>
+                <div style="flex: 1;"></div>
+                <button class="btn btn-small btn-secondary" onclick="clearClapmark()" title="Remove all plugin-made markers and score curves from this lane">Clear</button>
+                <button class="btn btn-small" id="clap-run-btn" onclick="runClapmark()">Run</button>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center; border-top: 1px solid var(--rule-soft); padding-top: 8px; font-size: 11px;">
+                <span>Rename all</span>
+                <select id="clap-ren-old" onmousedown="clapFillRename()" onfocus="clapFillRename()" style="max-width: 130px;"></select>
+                <span>to</span>
+                <input type="text" id="clap-ren-new" style="flex: 1; font-size: 12px;" onkeydown="if (event.key === 'Enter') { event.preventDefault(); clapRename(); }">
+                <button class="btn btn-small btn-secondary" onclick="clapRename()">Rename</button>
+            </div>
+            <div id="clap-status" style="font-size: 11px; color: var(--grafite); min-height: 14px; white-space: pre-wrap;"></div>
+        </div>
     </div>
 
     <div class="header">
@@ -1886,6 +2007,8 @@ HTML_TEMPLATE = '''
                 </div>
                 <button class="marker-quick-btn-inline" onclick="dropMarkerAtPlayhead()" title="Drop marker (M)">M</button>
             </div>
+            <canvas id="time-ruler" title="Click to move the playhead" onmousedown="seekToClientX(event.clientX); updatePlayheadPosition();"></canvas>
+            <div id="lane-strip"></div>
             <div class="player-progress-container" id="player-progress-container" title="Grabber (G): drag scrolls · Selector (S): drag selects, M makes a marker · Click: seek · ⌘+drag: scrub playhead · ⌥+drag: move marker edge · ⇧+drag: zoom (←→ time, ↑↓ amplitude) · r/t: zoom in/out">
                     <canvas class="spectro-canvas" id="spectro-canvas"></canvas>
                     <canvas class="waveform-canvas" id="waveform-canvas"></canvas>
@@ -1894,6 +2017,21 @@ HTML_TEMPLATE = '''
                     <div class="player-markers" id="player-markers"></div>
                     <div class="wave-selection" id="wave-selection"></div>
                 </div>
+            <div id="clap-scores" style="display:none;">
+                <div class="clap-scores-bar">
+                    <span class="clap-scores-title">SCORES</span>
+                    <span id="clap-scores-chips"></span>
+                    <span id="clap-scores-thr" class="clap-scores-thr"></span>
+                    <span style="flex:1;"></span>
+                    <button class="clap-chip" id="clap-try-make" style="display: none; font-weight: 700;" onclick="clapTryCommit()" title="Make markers from this candidate, named by its label">Make markers</button>
+                    <button class="clap-chip" id="clap-try-discard" style="display: none;" onclick="clapTryDiscard()">Discard</button>
+                    <button class="clap-chip" onclick="auditionStep(-1)" title="Listen to the previous marker of this label ( [ )">&#9664;</button>
+                    <button class="clap-chip" onclick="auditionStep(1)" title="Listen to the next marker of this label ( ] )">&#9654;</button>
+                    <span class="clap-scores-hint">drag up/down to set the threshold &#183; double-click a label to rename</span>
+                    <button class="clap-chip" onclick="hideClapScores()" title="Hide scores">&#215;</button>
+                </div>
+                <canvas id="clap-scores-canvas"></canvas>
+            </div>
             <div class="player-info-row">
                 <span class="tool-name-display" id="tool-name-display" title="Current edit tool (G = Grabber, S = Selector)">Grabber</span>
                 <span class="player-filename-inline" id="player-filename"></span>
@@ -1904,6 +2042,8 @@ HTML_TEMPLATE = '''
                     <button class="sel-btn" onclick="zoomToSelection()" title="Zoom to selection">Zoom</button>
                     <button class="sel-btn" onclick="clearWaveSelection()" title="Clear selection (Esc)">×</button>
                 </span>
+                <span class="audio-info" id="marker-sel-info"></span>
+                <button class="sel-btn" id="overlay-mode-btn" onclick="cycleOverlayMode()" title="How markers appear on the waveform: tabs / shade / off (the lanes above always show them)">On wave: shade</button>
                 <span class="audio-info" id="audio-info"></span>
             </div>
             <div class="player-resize-handle" onmousedown="startPlayerResize(event)" title="Drag to resize waveform"></div>
@@ -2024,6 +2164,19 @@ HTML_TEMPLATE = '''
             console.log('Undo stack:', undoStack.length, 'Redo stack:', redoStack.length);
         }
         
+        // Marker edits: one undo step can hold changes to several lanes (group delete, move, paste).
+        function applyMarkerChanges(fileId, changes, which) {
+            return Promise.all(changes.map(function(c) {
+                return fetch('/api/file/' + fileId + '/value', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({field_id: c.fieldId, value: c[which]})
+                });
+            })).then(function() {
+                if (selectedFileId === fileId) loadFileMetadata(selectedFileId);
+                updateUndoRedoState();
+            });
+        }
+
         function undo() {
             if (undoStack.length === 0) {
                 console.log('Nothing to undo');
@@ -2031,6 +2184,11 @@ HTML_TEMPLATE = '''
             }
             
             const action = undoStack.pop();
+            if (action.type === 'markers') {
+                markerSelClear();
+                applyMarkerChanges(action.fileId, action.changes, 'before').then(function() { redoStack.push(action); });
+                return;
+            }
             
             // Perform reverse action
             if (action.type === 'setValue') {
@@ -2084,6 +2242,11 @@ HTML_TEMPLATE = '''
             }
             
             const action = redoStack.pop();
+            if (action.type === 'markers') {
+                markerSelClear();
+                applyMarkerChanges(action.fileId, action.changes, 'after').then(function() { undoStack.push(action); });
+                return;
+            }
             
             // Perform the action again
             if (action.type === 'setValue') {
@@ -2313,6 +2476,12 @@ HTML_TEMPLATE = '''
 
         // Ask for exactly the device pixels of the lane (Retina included).
         function requestSpectro(viewStart, viewEnd, devW, devH) {
+            // Fetch a quarter of a view either side, so dragging shows real data straight away.
+            var pad = (viewEnd - viewStart) * 0.25;
+            var padStart = Math.max(0, viewStart - pad), padEnd = Math.min(1, viewEnd + pad);
+            devW = devW * (padEnd - padStart) / Math.max(1e-9, viewEnd - viewStart);
+            viewStart = padStart;
+            viewEnd = padEnd;
             var cols = Math.max(64, Math.min(4096, Math.round(devW)));
             var rows = Math.max(64, Math.min(1024, Math.round(devH)));
             var reqKey = currentWaveformFileId + '|' + viewStart.toFixed(6) + '|' + viewEnd.toFixed(6) + '|' + cols + '|' + rows;
@@ -2368,7 +2537,13 @@ HTML_TEMPLATE = '''
                 var sw = (viewEnd - viewStart) / span * res.cols;
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
-                ctx.drawImage(spectroState.img, sx, 0, sw, res.rows, 0, 0, W, H);
+                // Clip the source to the image and move the destination with it, so a view that has
+                // scrolled past the fetched data shows the data in its right place (WebKit would stretch it).
+                var cx0 = Math.max(0, sx), cx1 = Math.min(res.cols, sx + sw);
+                if (cx1 > cx0 && sw > 0) {
+                    ctx.drawImage(spectroState.img, cx0, 0, cx1 - cx0, res.rows,
+                                  (cx0 - sx) / sw * W, 0, (cx1 - cx0) / sw * W, H);
+                }
                 // Frequency labels on the glass
                 ctx.font = (9 * dpr) + 'px "B612 Mono", Menlo, monospace';
                 ctx.fillStyle = 'rgba(184, 132, 51, 0.9)';
@@ -2382,7 +2557,7 @@ HTML_TEMPLATE = '''
                     ctx.fillText(f >= 1000 ? (f / 1000) + 'k' : String(f), 7 * dpr, y + 3 * dpr);
                 }
                 var covers = viewStart >= res.window[0] - 1e-9 && viewEnd <= res.window[1] + 1e-9;
-                var sharp = sw >= Math.min(4096, W) * 0.9 && res.rows >= Math.min(1024, H) * 0.9;
+                var sharp = sw >= Math.min(4096 / 1.5, W) * 0.9 && res.rows >= Math.min(1024, H) * 0.9;
                 if (!covers || !sharp) requestSpectro(viewStart, viewEnd, W, H);
             } else if (spectroState.error) {
                 ctx.font = (11 * dpr) + 'px "Archivo", sans-serif';
@@ -2557,6 +2732,7 @@ HTML_TEMPLATE = '''
                         markers = file.fields[field.name] ? JSON.parse(file.fields[field.name]) : [];
                     } catch(e) { markers = []; }
                     
+                    markers.sort((a, b) => timeToSeconds(a.start) - timeToSeconds(b.start));   // same order as the list
                     if (markers[markerIndex]) {
                         markers[markerIndex].color = newColor;
                     }
@@ -2582,31 +2758,7 @@ HTML_TEMPLATE = '''
             hideColorPicker();
             
             const rect = element.getBoundingClientRect();
-            const picker = document.createElement('div');
-            picker.className = 'color-picker-popup';
-            picker.id = 'color-picker-popup';
-            picker.style.left = rect.right + 5 + 'px';
-            picker.style.top = rect.top + 'px';
-            
-            markerColors.forEach(c => {
-                const swatch = document.createElement('div');
-                swatch.className = 'color-picker-swatch';
-                swatch.style.background = c.border;
-                swatch.title = c.name;
-                swatch.onclick = () => {
-                    changeMarkerColor(fieldId, markerIndex, c.name);
-                    hideColorPicker();
-                };
-                picker.appendChild(swatch);
-            });
-            
-            document.body.appendChild(picker);
-            activeColorPicker = picker;
-            
-            // Close on click outside
-            setTimeout(() => {
-                document.addEventListener('click', hideColorPickerOnClickOutside);
-            }, 10);
+            openColorChooser(rect.right + 5, rect.top, (name) => changeMarkerColor(fieldId, markerIndex, name));
         }
         
         function hideColorPicker() {
@@ -2717,7 +2869,7 @@ HTML_TEMPLATE = '''
                     if (newVal === null) return;
                     
                     // Validate time format — milliseconds (.mmm) optional
-                    if (!/^\d{1,2}:\d{2}:\d{2}(\.\d{1,3})?$/.test(newVal)) {
+                    if (!/^\\d{1,2}:\\d{2}:\\d{2}(\\.\\d{1,3})?$/.test(newVal)) {
                         alert('Invalid time format. Use HH:MM:SS or HH:MM:SS.mmm');
                         return;
                     }
@@ -2749,6 +2901,7 @@ HTML_TEMPLATE = '''
                         markers = file.fields[field.name] ? JSON.parse(file.fields[field.name]) : [];
                     } catch(e) { markers = []; }
                     
+                    markers.sort((a, b) => timeToSeconds(a.start) - timeToSeconds(b.start));   // same order as the list
                     const marker = markers[markerIndex];
                     if (!marker) return;
                     
@@ -3138,6 +3291,63 @@ HTML_TEMPLATE = '''
             return s * n;
         }
 
+        // ---- Time ruler above the waveform (follows zoom and scroll) ----
+        var RULER_STEPS = [[0.01, 0.002], [0.02, 0.005], [0.05, 0.01], [0.1, 0.02], [0.2, 0.05], [0.5, 0.1],
+                           [1, 0.2], [2, 0.5], [5, 1], [10, 2], [15, 5], [30, 5], [60, 10], [120, 30],
+                           [300, 60], [600, 120], [900, 300], [1800, 300], [3600, 600]];
+        function rulerLabel(t, step, longFile) {
+            var dec = step < 0.1 ? 2 : (step < 1 ? 1 : 0);
+            var whole = Math.floor(t + 1e-9);
+            var h = Math.floor(whole / 3600), m = Math.floor((whole % 3600) / 60), sec = whole % 60;
+            var ss = (sec < 10 ? '0' : '') + sec;
+            if (dec) ss += (t - whole).toFixed(dec).slice(1);
+            if (longFile) return h + ':' + (m < 10 ? '0' : '') + m + ':' + ss;
+            return m + ':' + ss;
+        }
+        function drawTimeRuler() {
+            var canvas = document.getElementById('time-ruler');
+            var container = document.getElementById('player-progress-container');
+            if (!canvas || !container) return;
+            var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+            var cssW = container.clientWidth, cssH = 18;
+            canvas.style.width = cssW + 'px';
+            canvas.width = Math.max(1, Math.round(cssW * dpr));
+            canvas.height = Math.round(cssH * dpr);
+            var ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, cssW, cssH);
+            var dur = (audioPlayer && audioPlayer.duration) || 0;
+            if (!dur || !isFinite(dur)) return;
+            var css = getComputedStyle(document.documentElement);
+            var ink = css.getPropertyValue('--wave-label').trim() || 'rgba(82,85,79,0.9)';
+            var font = css.getPropertyValue('--font-mono').trim() || 'monospace';
+            var t0 = waveformOffset * dur;
+            var span = dur / waveformZoom;
+            var pxPerSec = cssW / span;
+            var step = RULER_STEPS[RULER_STEPS.length - 1];
+            for (var i = 0; i < RULER_STEPS.length; i++) {
+                if (RULER_STEPS[i][0] * pxPerSec >= 70) { step = RULER_STEPS[i]; break; }
+            }
+            var major = step[0], minor = step[1];
+            ctx.strokeStyle = ink;
+            ctx.fillStyle = ink;
+            ctx.lineWidth = 1;
+            ctx.font = '10px ' + font;
+            ctx.textBaseline = 'top';
+            ctx.beginPath();
+            ctx.moveTo(0, cssH - 0.5); ctx.lineTo(cssW, cssH - 0.5);
+            var first = Math.floor(t0 / minor) * minor;
+            var longFile = dur >= 3600;
+            for (var t = first; t <= t0 + span + minor; t += minor) {
+                var x = Math.round((t - t0) * pxPerSec) + 0.5;
+                if (x < 0 || x > cssW) continue;
+                var isMajor = Math.abs(t / major - Math.round(t / major)) < 1e-6;
+                ctx.moveTo(x, cssH); ctx.lineTo(x, isMajor ? 4 : cssH - 5);
+                if (isMajor) ctx.fillText(rulerLabel(Math.round(t / minor) * minor, major, longFile), x + 3, 2);
+            }
+            ctx.stroke();
+        }
+
         function drawWaveform(peaks) {
             var canvas = document.getElementById('waveform-canvas');
             if (!canvas) return;
@@ -3180,6 +3390,8 @@ HTML_TEMPLATE = '''
             var clipColor  = themeColor('--wave-clip',   '#ef4444');
 
             clampWaveformOffset();
+            try { drawTimeRuler(); } catch (e) {}
+            try { drawClapScores(); } catch (e) {}
 
             var data = currentWaveformData;
             var nCh = 1;
@@ -3748,6 +3960,19 @@ HTML_TEMPLATE = '''
             var t = el.tagName;
             return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || el.isContentEditable;
         }
+        function playheadToStart() {
+            var el = document.activeElement;
+            if (el && el.tagName === 'BUTTON') { el.click(); return; }   // Return on a focused button still presses it
+            if (!audioPlayer || !audioPlayer.duration) return;
+            audioPlayer.currentTime = 0;
+            if (waveformOffset > 0) {
+                waveformOffset = 0;
+                redrawWaveformView();
+            } else {
+                updatePlayheadPosition(0);
+            }
+        }
+
         function playOrPause() {
             if (currentPlayingId) {
                 togglePlayPause();
@@ -3776,6 +4001,7 @@ HTML_TEMPLATE = '''
         // inInputs: also works while typing in a field
         var SHORTCUT_ACTIONS = [
             { id: 'playPause',     group: 'Transport', label: 'Play / pause (plays the selection if there is one)', keys: ['Space'], run: playOrPause },
+            { id: 'toStart',       group: 'Transport', label: 'Playhead to start', keys: ['Enter'], run: playheadToStart },
             { id: 'marker',        group: 'Transport', label: 'Drop marker at playhead (or across the selection)', keys: ['M'], run: markerAtPlayheadOrSelection },
             { id: 'nextMarker',    group: 'Transport', label: 'Jump to next marker', keys: ['Mod+Shift+M'], run: function () { jumpToNextMarker(); } },
             { id: 'prevMarker',    group: 'Transport', label: 'Jump to previous marker', keys: ['Mod+Shift+Comma'], run: function () { jumpToPreviousMarker(); } },
@@ -3785,11 +4011,15 @@ HTML_TEMPLATE = '''
             { id: 'zoomOut',       group: 'Waveform', label: 'Zoom out', keys: ['T'], run: function () { zoomWaveform(1 / 1.3); } },
             { id: 'nextFile',      group: 'Files', label: 'Next file', keys: ['Down'], run: function () { navigateFiles(1); } },
             { id: 'prevFile',      group: 'Files', label: 'Previous file', keys: ['Up'], run: function () { navigateFiles(-1); } },
-            { id: 'selectAll',     group: 'Files', label: 'Select all files', keys: ['Mod+A'], run: function () { selectAllFiles(); } },
+            { id: 'selectAll',     group: 'Files', label: 'Select all files', keys: ['Mod+A'], run: function () { if (laneHoverFid) selectAllVisibleMarkers(); else selectAllFiles(); } },
+            { id: 'copyMarkers',   group: 'Markers', label: 'Copy selected markers', keys: ['Mod+C'], run: function () { copySelectedMarkers(); } },
+            { id: 'pasteMarkers',  group: 'Markers', label: 'Paste markers at the playhead (into the lane under the mouse)', keys: ['Mod+V'], run: function () { pasteMarkers(); } },
+            { id: 'auditionPrev',  group: 'Markers', label: 'Listen to the previous marker', keys: ['BracketLeft'], run: function () { auditionStep(-1); } },
+            { id: 'auditionNext',  group: 'Markers', label: 'Listen to the next marker', keys: ['BracketRight'], run: function () { auditionStep(1); } },
             { id: 'deselectAll',   group: 'Files', label: 'Deselect all files', keys: ['Mod+D'], run: function () { deselectAllFiles(); } },
-            { id: 'deleteFiles',   group: 'Files', label: 'Remove selected file(s) from the database', keys: ['Delete', 'Backspace'], run: deleteSelectedFiles },
+            { id: 'deleteFiles',   group: 'Files', label: 'Remove selected file(s) from the database', keys: ['Delete', 'Backspace'], run: function () { if (markerSel.size) deleteSelectedMarker(); else deleteSelectedFiles(); } },
             { id: 'quickTag',      group: 'Files', label: 'Quick add tag', keys: ['Mod+T'], run: function () { quickAddTag(); } },
-            { id: 'escape',        group: 'Files', label: 'Close window / clear selection / deselect', keys: ['Escape'], run: escapeAction },
+            { id: 'escape',        group: 'Files', label: 'Close window / clear selection / deselect', keys: ['Escape'], run: function (e) { if (markerSel.size) { markerSelClear(); updatePlayerMarkers(); } else escapeAction(e); } },
             { id: 'searchFields',  group: 'Search', label: 'Search fields', keys: ['Mod+Shift+J'], inInputs: true, run: function () { document.getElementById('field-search').focus(); } },
             { id: 'searchFiles',   group: 'Search', label: 'Search files', keys: ['Mod+Shift+K'], inInputs: true, run: function () { document.getElementById('file-search').focus(); } },
             { id: 'searchContent', group: 'Search', label: 'Search field content', keys: ['Mod+Shift+L'], inInputs: true, run: function () { document.getElementById('content-search').focus(); } },
@@ -4141,6 +4371,9 @@ HTML_TEMPLATE = '''
             document.getElementById('help-modal').classList.remove('visible');
         }
         
+        var fileInfoFields = [];
+        fetch('/api/fileinfo/fields').then(r => r.json()).then(list => { fileInfoFields = list || []; loadFields(); }).catch(() => {});
+
         function loadFields() {
             fetch('/api/fields')
                 .then(r => r.json())
@@ -4148,8 +4381,12 @@ HTML_TEMPLATE = '''
                     allFields = fields;
                     renderFields();
                     
-                    // Update query field dropdowns
-                    const fieldOptions = fields.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+                    // Update query field dropdowns (metadata fields, then built-in file information)
+                    const infoOptions = fileInfoFields.length
+                        ? '<option value="" disabled>-- File information --</option>' +
+                          fileInfoFields.map(f => `<option value="${f.id}">File: ${f.name}</option>`).join('')
+                        : '';
+                    const fieldOptions = fields.map(f => `<option value="${f.id}">${f.name}</option>`).join('') + infoOptions;
                     document.querySelectorAll('[id^="qfield-"]').forEach(sel => {
                         const current = sel.value;
                         sel.innerHTML = '<option value="">Select field...</option>' + fieldOptions;
@@ -4166,6 +4403,40 @@ HTML_TEMPLATE = '''
                 });
         }
         
+        // Folded fields: shown as a single line in the file panel. Remembered between sessions.
+        var fieldCollapsed = {}, fieldSolo = null;
+        try { fieldCollapsed = JSON.parse(localStorage.getItem('earmark_field_folded') || '{}'); } catch (e) {}
+        function saveFieldFolds() { try { localStorage.setItem('earmark_field_folded', JSON.stringify(fieldCollapsed)); } catch (e) {} }
+        function applyFieldFolds() {
+            document.querySelectorAll('#metadata-panel .mf-wrap').forEach(function(w) {
+                w.classList.toggle('collapsed', !!fieldCollapsed[w.getAttribute('data-fid')]);
+            });
+        }
+        function toggleFieldFold(fid, e) {
+            if (e && e.altKey) {                     // show only this field (again: show all)
+                fieldCollapsed = {};
+                if (fieldSolo === fid) {
+                    fieldSolo = null;
+                } else {
+                    fieldSolo = fid;
+                    allFields.forEach(function(f) { if (f.id !== fid) fieldCollapsed[f.id] = true; });
+                }
+            } else if (fieldCollapsed[fid]) {
+                delete fieldCollapsed[fid];
+            } else {
+                fieldCollapsed[fid] = true;
+            }
+            saveFieldFolds();
+            renderFields();
+            applyFieldFolds();
+        }
+        document.addEventListener('click', function(e) {
+            var lab = e.target.closest && e.target.closest('#metadata-panel .mf-wrap > .form-group > label');
+            if (!lab || e.target.closest('button, input, select, a')) return;
+            e.preventDefault();                      // a label would otherwise 'click' the button inside it
+            toggleFieldFold(parseInt(lab.closest('.mf-wrap').getAttribute('data-fid')), e);
+        });
+
         function renderFields() {
             const container = document.getElementById('fields-list');
             let fields = allFields;
@@ -4178,11 +4449,15 @@ HTML_TEMPLATE = '''
                 container.innerHTML = '<div class="empty-state">No fields yet</div>';
             } else {
                 container.innerHTML = fields.map(f => `
-                    <div class="field-item" onclick="editField(${f.id})">
+                    <div class="field-item${fieldCollapsed[f.id] ? ' folded' : ''}" onclick="editField(${f.id})">
                         <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div>
+                            <div style="display: flex; gap: 6px; align-items: start;">
+                                <span class="fi-fold" onclick="event.stopPropagation(); toggleFieldFold(${f.id}, event)"
+                                      title="Fold / unfold this field in the file panel (option-click: show only this field)">${fieldCollapsed[f.id] ? '&#9656;' : '&#9662;'}</span>
+                                <div>
                                 <div style="font-weight: 500;">${f.name}</div>
                                 <div style="font-size: 11px; color: var(--grafite);">${f.type}${f.type === 'parameter' ? ' (' + f.min + '-' + f.max + ')' : ''}</div>
+                                </div>
                             </div>
                             <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); deleteField(${f.id})" style="padding: 2px 6px;">×</button>
                         </div>
@@ -4842,6 +5117,7 @@ HTML_TEMPLATE = '''
 
             container.addEventListener('mousedown', (e) => {
                 if (e.button !== 0) return;
+                if (markerSel.size && !e.altKey && !e.shiftKey) { markerSelClear(); updatePlayerMarkers(); }
                 if (!audioPlayer || !audioPlayer.duration) return;
                 const rect = container.getBoundingClientRect();
 
@@ -5109,8 +5385,260 @@ function updatePlayerMarkers() {
             } else if (currentMarkers.length > 0) {
                 currentMarkers.forEach((m, idx) => drawMarkerBar(m, markersContainer, currentMarkersFieldId, idx));
             }
+            // Stack name tabs that would overlap, so every marker stays grabbable.
+            var rows = [];
+            var contW = markersContainer.clientWidth || 1000;
+            Array.prototype.slice.call(markersContainer.querySelectorAll('.player-marker-label'))
+                .map(function(t) {
+                    var left = parseFloat(t.parentElement.style.left) / 100 * contW;
+                    return {t: t, left: left, right: left + 10 + t.textContent.length * 6.5};
+                })
+                .sort(function(a, b) { return a.left - b.left; })
+                .forEach(function(o) {
+                    var row = 0;
+                    while (rows[row] !== undefined && rows[row] > o.left - 2) row++;
+                    rows[row] = o.right;
+                    if (row) o.t.style.top = (2 + row * 15) + 'px';
+                });
+            renderLaneStrip();
         }
- 
+
+        // ---- Lane strip: one row per markers field, under the ruler ----
+        var waveOverlayMode = 'shade';
+        try { waveOverlayMode = localStorage.getItem('earmark_overlay_mode') || 'shade'; } catch (e) {}
+        var laneDrag = null;      // {fid, key, overFid, copy} while dragging a marker in the strip
+
+        function cycleOverlayMode() {
+            waveOverlayMode = {full: 'shade', shade: 'off', off: 'full'}[waveOverlayMode] || 'shade';
+            try { localStorage.setItem('earmark_overlay_mode', waveOverlayMode); } catch (e) {}
+            updatePlayerMarkers();
+        }
+
+        function renderLaneStrip() {
+            var strip = document.getElementById('lane-strip');
+            var overlay = document.getElementById('player-markers');
+            var btn = document.getElementById('overlay-mode-btn');
+            if (overlay) {
+                overlay.classList.toggle('mode-shade', waveOverlayMode === 'shade');
+                overlay.classList.toggle('mode-off', waveOverlayMode === 'off');
+            }
+            if (btn) btn.textContent = 'On wave: ' + {full: 'tabs', shade: 'shade', off: 'off'}[waveOverlayMode];
+            if (!strip) return;
+            var ids = Object.keys(markerFieldsState);
+            var dur = audioPlayer && audioPlayer.duration;
+            if (!ids.length || !dur) { strip.innerHTML = ''; return; }
+            var html = '';
+            ids.forEach(function(fid) {
+                var st = markerFieldsState[fid];
+                var cls = 'lane-row' + (st.visible ? '' : ' collapsed') + (laneDrag && laneDrag.overFid === fid && laneDrag.fid !== fid ? ' drop' : '');
+                html += '<div class="' + cls + '" data-fid="' + fid + '">';
+                html += '<span class="lane-name" data-fid="' + fid + '" title="' + (st.visible ? 'Hide' : 'Show') + ' this lane">' +
+                        (st.visible ? '\u25C9 ' : '\u25CB ') + escapeHtml(st.name) + ' (' + st.markers.length + ')</span>';
+                if (st.visible) {
+                    st.markers.forEach(function(m, idx) {
+                        var a = timeToSeconds(m.start) / dur, b = timeToSeconds(m.end) / dur;
+                        var l = (a - waveformOffset) * waveformZoom * 100, r = (b - waveformOffset) * waveformZoom * 100;
+                        if (r < 0 || l > 100) return;
+                        var cl = Math.max(0, l), cr = Math.min(100, r);
+                        var c = getMarkerColor(m.color);
+                        var sel = markerIsSel(fid, m) ? ' selected' : '';
+                        html += '<div class="lane-mk' + sel + '" data-fid="' + fid + '" data-idx="' + idx + '" title="' +
+                                escapeHtml(m.label + ' [' + m.start + ' - ' + m.end + ']') + '" style="left:' + cl + '%;width:' +
+                                Math.max(0.3, cr - cl) + '%;background:' + c.bg + ';border-left-color:' + (l >= 0 ? c.border : 'transparent') +
+                                ';color:var(--inchiostro);">' + escapeHtml(m.label) +
+                                (l >= 0 ? '<span class="lh" data-edge="start" style="left:0;"></span>' : '') +
+                                (r <= 100 ? '<span class="lh" data-edge="end" style="right:0;"></span>' : '') + '</div>';
+                    });
+                }
+                html += '</div>';
+            });
+            strip.innerHTML = html;
+        }
+
+        // Move (or copy) the selection into another lane, at the same times.
+        function moveSelectionToLane(toFid, copy, group) {
+            var dst = markerFieldsState[toFid];
+            if (!dst) return;
+            if (group && group.length) {                  // a lane change keeps the markers' exact times
+                group.forEach(function(x) { x.m.start = x.start; x.m.end = x.end; });
+                markerSel = new Set(group.map(function(x) { return markerKey(x.fid, x.m); }));
+            }
+            var items = markerSelItems();
+            if (!items.length) return;
+            var keys = [], touched = {};
+            touched[toFid] = 1;
+            items.forEach(function(it) {
+                if (String(it.fid) === String(toFid) && !copy) { keys.push(markerKey(toFid, it.m)); return; }
+                var nm = {start: it.m.start, end: it.m.end, label: it.m.label};      // becomes your own marker
+                if (it.m.color) nm.color = it.m.color;
+                dst.markers.push(nm);
+                keys.push(markerKey(toFid, nm));
+                if (!copy) {
+                    var src = markerFieldsState[it.fid];
+                    src.markers = src.markers.filter(function(m) { return m !== it.m; });
+                    touched[it.fid] = 1;
+                }
+            });
+            beginMarkerUndo();
+            Object.keys(touched).forEach(function(fid) {
+                var st = markerFieldsState[fid];
+                st.markers.sort(function(a, b) { return timeToSeconds(a.start) - timeToSeconds(b.start); });
+                commitMarkerField(fid, st.markers);
+            });
+            endMarkerUndo();
+            markerSelSet(keys);
+            updatePlayerMarkers();
+        }
+
+        var laneHoverFid = null;      // lane under the mouse (for Cmd+A / Cmd+V)
+        var laneBox = null;           // box selection in progress
+
+        (function initLaneStrip() {
+            var strip = document.getElementById('lane-strip');
+            if (!strip) return;
+            function rowAt(y) {
+                var hit = null;
+                Array.prototype.forEach.call(strip.querySelectorAll('.lane-row'), function(row) {
+                    var r = row.getBoundingClientRect();
+                    if (y >= r.top && y < r.bottom) hit = row.getAttribute('data-fid');
+                });
+                return hit;
+            }
+            strip.addEventListener('mousemove', function(e) { laneHoverFid = rowAt(e.clientY); });
+            strip.addEventListener('mouseleave', function() { laneHoverFid = null; });
+            strip.addEventListener('mousedown', function(e) {
+                if (e.button !== 0) return;
+                var name = e.target.closest('.lane-name');
+                if (name) {
+                    e.preventDefault();
+                    var fid = name.getAttribute('data-fid');
+                    if (e.altKey) selectAllMarkersInLane(fid);              // option-click: select the whole lane
+                    else setMarkerFieldVisibility(fid, !markerFieldsState[fid].visible);
+                    return;
+                }
+                var mk = e.target.closest('.lane-mk');
+                if (!mk) {                                   // empty lane space: box selection
+                    e.preventDefault();
+                    laneBox = {x0: e.clientX, y0: e.clientY, add: e.shiftKey, el: null};
+                    return;
+                }
+                var fid2 = mk.getAttribute('data-fid'), idx = parseInt(mk.getAttribute('data-idx'));
+                var edge = e.target.getAttribute('data-edge');
+                var st = markerFieldsState[fid2];
+                if (e.altKey && !edge && st && st.markers[idx]) {          // option-click: every marker with this name in the lane
+                    var lab = clapBaseLabel(st.markers[idx].label);
+                    markerSelSet(st.markers.filter(function(m) { return clapBaseLabel(m.label) === lab; })
+                                           .map(function(m) { return markerKey(fid2, m); }));
+                }
+                startMarkerDrag(e, parseInt(fid2), idx, edge || 'move');
+                laneDrag = {fid: fid2, overFid: fid2, group: activeMarkerDrag ? activeMarkerDrag.group : null};
+            });
+            strip.addEventListener('click', function(e) {
+                var mk = e.target.closest('.lane-mk');
+                if (!mk || e.shiftKey || e.altKey) return;
+                if (strip.dataset.justDragged === '1') { delete strip.dataset.justDragged; return; }
+                var st = markerFieldsState[mk.getAttribute('data-fid')];
+                var m = st && st.markers[parseInt(mk.getAttribute('data-idx'))];
+                if (m) audioPlayer.currentTime = timeToSeconds(m.start);
+            });
+            strip.addEventListener('dblclick', function(e) {
+                var mk = e.target.closest('.lane-mk');
+                if (!mk) return;
+                var fid = parseInt(mk.getAttribute('data-fid'));
+                var st = markerFieldsState[fid];
+                var m = st && st.markers[parseInt(mk.getAttribute('data-idx'))];
+                if (!m) return;
+                var items = markerIsSel(fid, m) && markerSel.size > 1 ? markerSelItems() : [{fid: fid, m: m}];
+                var title = items.length > 1 ? 'Rename ' + items.length + ' markers' : 'Edit marker';
+                qdPrompt('Marker label:', m.label, {title: title, ok: 'Save'}).then(function(v) {
+                    if (v === null || !v.trim()) return;
+                    beginMarkerUndo();
+                    var fids = {};
+                    items.forEach(function(it) { it.m.label = v.trim(); fids[it.fid] = 1; });
+                    Object.keys(fids).forEach(function(f) { commitMarkerField(f, markerFieldsState[f].markers); });
+                    endMarkerUndo();
+                    markerSelSet(items.map(function(it) { return markerKey(it.fid, it.m); }));
+                    updatePlayerMarkers();
+                });
+            });
+            strip.addEventListener('contextmenu', function(e) {
+                var mk = e.target.closest('.lane-mk');
+                if (!mk) return;
+                e.preventDefault();
+                var fid = parseInt(mk.getAttribute('data-fid'));
+                var st = markerFieldsState[fid];
+                var m = st && st.markers[parseInt(mk.getAttribute('data-idx'))];
+                if (!m) return;
+                var items = markerIsSel(fid, m) && markerSel.size > 1 ? markerSelItems() : [{fid: fid, m: m}];
+                openColorChooser(e.clientX + 4, e.clientY + 4, function(color) {
+                    beginMarkerUndo();
+                    var fids = {};
+                    items.forEach(function(it) { it.m.color = color; fids[it.fid] = 1; });
+                    Object.keys(fids).forEach(function(f) { commitMarkerField(f, markerFieldsState[f].markers); });
+                    endMarkerUndo();
+                    updatePlayerMarkers();
+                });
+            });
+            document.addEventListener('mousemove', function(e) {
+                if (laneBox) {
+                    if (!laneBox.el && Math.abs(e.clientX - laneBox.x0) + Math.abs(e.clientY - laneBox.y0) > 4) {
+                        laneBox.el = document.createElement('div');
+                        laneBox.el.id = 'lane-box';
+                        document.body.appendChild(laneBox.el);
+                    }
+                    if (laneBox.el) {
+                        var r = strip.getBoundingClientRect();
+                        var x1 = Math.min(laneBox.x0, e.clientX), x2 = Math.max(laneBox.x0, e.clientX);
+                        var y1 = Math.max(r.top, Math.min(laneBox.y0, e.clientY)), y2 = Math.min(r.bottom, Math.max(laneBox.y0, e.clientY));
+                        laneBox.el.style.left = x1 + 'px'; laneBox.el.style.top = y1 + 'px';
+                        laneBox.el.style.width = (x2 - x1) + 'px'; laneBox.el.style.height = Math.max(2, y2 - y1) + 'px';
+                        laneBox.x1 = x1; laneBox.x2 = x2; laneBox.y1 = y1; laneBox.y2 = y2;
+                    }
+                    return;
+                }
+                if (!laneDrag) return;
+                var over = rowAt(e.clientY);
+                laneDrag.copy = e.altKey;
+                if (over !== laneDrag.overFid) { laneDrag.overFid = over; renderLaneStrip(); }
+            });
+            document.addEventListener('mouseup', function(e) {
+                if (laneBox) {
+                    var b = laneBox;
+                    laneBox = null;
+                    if (!b.el) {                                  // a click on empty lane space: deselect
+                        if (markerSel.size && !b.add) { markerSelClear(); updatePlayerMarkers(); }
+                        return;
+                    }
+                    b.el.remove();
+                    var t1 = clientXToSeconds(b.x1), t2 = clientXToSeconds(b.x2);
+                    var keys = b.add ? Array.from(markerSel) : [];
+                    Array.prototype.forEach.call(strip.querySelectorAll('.lane-row'), function(row) {
+                        var rr = row.getBoundingClientRect();
+                        if (rr.bottom <= b.y1 || rr.top >= b.y2) return;
+                        var fid = row.getAttribute('data-fid'), st = markerFieldsState[fid];
+                        if (!st || !st.visible) return;
+                        st.markers.forEach(function(m) {
+                            if (timeToSeconds(m.start) < t2 && timeToSeconds(m.end) > t1) {
+                                var k = markerKey(fid, m);
+                                if (keys.indexOf(k) < 0) keys.push(k);
+                            }
+                        });
+                    });
+                    markerSelSet(keys);
+                    updatePlayerMarkers();
+                    return;
+                }
+                if (!laneDrag) return;
+                var d = laneDrag;
+                laneDrag = null;
+                if (d.overFid && d.overFid !== d.fid && markerSel.size) {
+                    moveSelectionToLane(d.overFid, e.altKey, d.group);
+                } else {
+                    renderLaneStrip();
+                }
+            });
+        })();
+
       // Helper: format seconds as HH:MM:SS.mmm for marker storage
         function secondsToHMS(sec) {
             sec = Math.max(0, sec);
@@ -5135,13 +5663,35 @@ function updatePlayerMarkers() {
         }
  
         // Commit edited markers for a field back to the server.
+        // Last saved state of each lane, for undo.
+        var markerSnapshots = {};
+        var markerUndoGroup = null;
+        function beginMarkerUndo() { markerUndoGroup = []; }
+        function endMarkerUndo() {
+            var g = markerUndoGroup;
+            markerUndoGroup = null;
+            if (g && g.length) pushUndo({type: 'markers', fileId: g[0].fileId, changes: g});
+        }
+
         function commitMarkerField(fieldId, markers) {
             if (!fieldId || !markers) return;
+            fieldId = parseInt(fieldId);
             // Optimistic local update
             if (markerFieldsState[fieldId]) markerFieldsState[fieldId].markers = markers;
             if (currentMarkersFieldId === fieldId) currentMarkers = markers;
-            const fileId = currentPlayingId || selectedFileId;
+            const fileId = selectedFileId || currentPlayingId;      // the lanes always show the selected file
             if (!fileId) return;
+            var snapKey = fileId + '|' + fieldId, after = JSON.stringify(markers), before = markerSnapshots[snapKey];
+            if (before !== undefined && before !== after) {
+                var ch = {fieldId: fieldId, before: before, after: after};
+                if (markerUndoGroup) {
+                    var same = markerUndoGroup.filter(function(c) { return c.fieldId === fieldId; })[0];
+                    if (same) same.after = after; else { ch.fileId = fileId; markerUndoGroup.push(ch); }
+                } else {
+                    pushUndo({type: 'markers', fileId: fileId, changes: [ch]});
+                }
+            }
+            markerSnapshots[snapKey] = after;
             fetch('/api/file/' + fileId + '/value', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -5199,6 +5749,11 @@ function updatePlayerMarkers() {
                                         startScreen >= 0, endScreen <= 100);
             }
  
+            if (fieldId != null && markerIsSel(fieldId, m)) {
+                markerEl.classList.add('selected');
+                markerEl.querySelectorAll('div').forEach(function(h) { h.style.pointerEvents = 'auto'; });
+            }
+
             container.appendChild(markerEl);
         }
  
@@ -5237,7 +5792,150 @@ function updatePlayerMarkers() {
  
         // Active drag state — kept module-level so the move/up handlers find it
         let activeMarkerDrag = null;
- 
+
+        // Marker selection (lanes and waveform). Markers are identified by lane + times + label,
+        // so a selection survives the list being re-sorted after an edit.
+        var selectedMarkerKey = null;          // the marker clicked last
+        var markerSel = new Set();             // every selected marker
+        function markerKey(fieldId, m) { return parseInt(fieldId) + '|' + m.start + '|' + m.end + '|' + m.label; }
+        function markerIsSel(fieldId, m) { return markerSel.has(markerKey(fieldId, m)); }
+        function markerSelClear() { markerSel = new Set(); selectedMarkerKey = null; updateMarkerSelInfo(); }
+        function markerSelSet(keys) { markerSel = new Set(keys); selectedMarkerKey = keys.length ? keys[keys.length - 1] : null; updateMarkerSelInfo(); }
+        function markerSelItems() {
+            var out = [];
+            Object.keys(markerFieldsState).forEach(function(fid) {
+                markerFieldsState[fid].markers.forEach(function(m, idx) {
+                    if (markerSel.has(markerKey(fid, m))) out.push({fid: parseInt(fid), m: m, idx: idx});
+                });
+            });
+            return out;
+        }
+        function updateMarkerSelInfo(extra) {
+            var el = document.getElementById('marker-sel-info');
+            if (!el) return;
+            if (extra) { el.textContent = extra; return; }
+            if (!markerSel.size) { el.textContent = ''; return; }
+            var lanes = {};
+            markerSelItems().forEach(function(it) { lanes[it.fid] = 1; });
+            var nl = Object.keys(lanes).length;
+            el.textContent = markerSel.size + ' marker' + (markerSel.size === 1 ? '' : 's') + ' selected' +
+                             (nl > 1 ? ' (' + nl + ' lanes)' : '');
+        }
+
+        function deleteSelectedMarker() {
+            var items = markerSelItems();
+            markerSelClear();
+            if (!items.length) { updatePlayerMarkers(); return; }
+            var byField = {};
+            items.forEach(function(it) { (byField[it.fid] = byField[it.fid] || []).push(it.m); });
+            beginMarkerUndo();
+            Object.keys(byField).forEach(function(fid) {
+                var st = markerFieldsState[fid];
+                st.markers = st.markers.filter(function(m) { return byField[fid].indexOf(m) < 0; });
+                commitMarkerField(fid, st.markers);
+            });
+            endMarkerUndo();
+            updatePlayerMarkers();
+        }
+
+        function selectAllMarkersInLane(fid, label) {
+            var st = markerFieldsState[fid];
+            if (!st) return;
+            var keys = st.markers.filter(function(m) { return !label || clapBaseLabel(m.label) === label; })
+                                 .map(function(m) { return markerKey(fid, m); });
+            markerSelSet(keys);
+            updatePlayerMarkers();
+        }
+        function clapBaseLabel(l) { l = l || ''; return l.charAt(l.length - 1) === '?' ? l.slice(0, -1) : l; }
+
+        function selectAllVisibleMarkers() {
+            var keys = [];
+            Object.keys(markerFieldsState).forEach(function(fid) {
+                var st = markerFieldsState[fid];
+                if (st.visible) st.markers.forEach(function(m) { keys.push(markerKey(fid, m)); });
+            });
+            markerSelSet(keys);
+            updatePlayerMarkers();
+        }
+
+        // ---- copy / paste markers (Cmd+C / Cmd+V) ----
+        var markerClipboard = null;
+        function copySelectedMarkers() {
+            var items = markerSelItems();
+            if (!items.length) return;
+            var base = Math.min.apply(null, items.map(function(it) { return timeToSeconds(it.m.start); }));
+            markerClipboard = items.map(function(it) {
+                return {fid: it.fid, s: timeToSeconds(it.m.start) - base, e: timeToSeconds(it.m.end) - base,
+                        label: it.m.label, color: it.m.color};
+            });
+            updateMarkerSelInfo(items.length + ' marker' + (items.length === 1 ? '' : 's') + ' copied');
+        }
+        function pasteMarkers() {
+            if (!markerClipboard || !markerClipboard.length || !audioPlayer || !audioPlayer.duration) return;
+            if (currentWaveformFileId !== selectedFileId) { updateMarkerSelInfo('Load this file in the player to paste'); return; }
+            var at = audioPlayer.currentTime, dur = audioPlayer.duration;
+            var target = laneHoverFid;            // lane under the mouse, else each marker's own lane
+            var keys = [], touched = {};
+            markerClipboard.forEach(function(c) {
+                var fid = target || c.fid;
+                var st = markerFieldsState[fid];
+                if (!st || at + c.s >= dur) return;
+                var nm = {start: secondsToHMS(at + c.s), end: secondsToHMS(Math.min(dur, at + c.e)), label: c.label};
+                if (c.color) nm.color = c.color;
+                st.markers.push(nm);
+                keys.push(markerKey(fid, nm));
+                touched[fid] = 1;
+            });
+            beginMarkerUndo();
+            Object.keys(touched).forEach(function(fid) {
+                var st = markerFieldsState[fid];
+                st.markers.sort(function(a, b) { return timeToSeconds(a.start) - timeToSeconds(b.start); });
+                commitMarkerField(fid, st.markers);
+            });
+            endMarkerUndo();
+            markerSelSet(keys);
+            updatePlayerMarkers();
+        }
+
+        // ---- audition: step through markers and play each one ([ and ]) ----
+        var auditionAt = null;
+        function auditionStep(dir) {
+            if (!audioPlayer || !audioPlayer.duration) return;
+            if (currentWaveformFileId !== selectedFileId) { updateMarkerSelInfo('Load this file in the player first'); return; }
+            var list = [], what = 'markers';
+            var strip = document.getElementById('clap-scores');
+            if (clapScores && strip && strip.style.display !== 'none' && clapScores.fileId === selectedFileId) {
+                var act = clapLabs()[clapActive];
+                var st = markerFieldsState[clapScores.fieldId];
+                if (act && st) {
+                    what = '"' + act.label + '"';
+                    list = st.markers.filter(function(m) { return clapBaseLabel(m.label) === act.label; });
+                }
+            } else {
+                Object.keys(markerFieldsState).forEach(function(fid) {
+                    if (markerFieldsState[fid].visible) list = list.concat(markerFieldsState[fid].markers);
+                });
+            }
+            list = list.slice().sort(function(a, b) { return timeToSeconds(a.start) - timeToSeconds(b.start); });
+            if (!list.length) { updateMarkerSelInfo('No ' + what + ' markers to listen to'); return; }
+            var ref = (auditionAt !== null) ? auditionAt : audioPlayer.currentTime - (dir > 0 ? 0.001 : -0.001);
+            var pick = -1;
+            if (dir > 0) { for (var i = 0; i < list.length; i++) if (timeToSeconds(list[i].start) > ref + 1e-3) { pick = i; break; } }
+            else { for (var j = list.length - 1; j >= 0; j--) if (timeToSeconds(list[j].start) < ref - 1e-3) { pick = j; break; } }
+            if (pick < 0) pick = dir > 0 ? 0 : list.length - 1;            // wrap around
+            var m = list[pick], s0 = timeToSeconds(m.start), e0 = Math.max(timeToSeconds(m.end), s0 + 0.05);
+            auditionAt = s0;
+            var dur = audioPlayer.duration, a = s0 / dur, b = e0 / dur;
+            if (a < waveformOffset || b > waveformOffset + 1 / waveformZoom) {     // bring it into view
+                waveformOffset = Math.max(0, a - 0.15 / waveformZoom);
+                redrawWaveformView();
+            }
+            waveSel = {start: s0, end: e0};
+            updateSelectionOverlay();
+            playSelection();
+            updateMarkerSelInfo('Listening: ' + m.label + '  ' + (pick + 1) + '/' + list.length);
+        }
+
         function startMarkerDrag(e, fieldId, markerIndex, mode) {
             e.preventDefault();
             e.stopPropagation();
@@ -5245,8 +5943,22 @@ function updatePlayerMarkers() {
             if (!st) return;
             const m = st.markers[markerIndex];
             if (!m) return;
+            const key = markerKey(fieldId, m);
+            if (e.shiftKey) {                                   // add to / remove from the selection
+                if (markerSel.has(key)) { markerSel.delete(key); updateMarkerSelInfo(); updatePlayerMarkers(); return; }
+                markerSel.add(key);
+            } else if (!markerSel.has(key)) {
+                markerSel = new Set([key]);
+            }
+            selectedMarkerKey = key;
+            updateMarkerSelInfo();
+            // a body drag moves every selected marker together
+            const group = (mode === 'move') ? markerSelItems().map(function(it) {
+                return {fid: it.fid, m: it.m, s: timeToSeconds(it.m.start), e: timeToSeconds(it.m.end),
+                        start: it.m.start, end: it.m.end};
+            }) : null;
             activeMarkerDrag = {
-                fieldId, markerIndex, mode,
+                fieldId, markerIndex, mode, key: key, group: group,
                 startClientX: e.clientX,
                 origStartSec: timeToSeconds(m.start),
                 origEndSec: timeToSeconds(m.end),
@@ -5280,11 +5992,23 @@ function updatePlayerMarkers() {
                 let newEnd = Math.max(drag.origStartSec + 0.05, Math.min(dur, drag.origEndSec + dSec));
                 m.end = secondsToHMS(newEnd);
             } else if (drag.mode === 'move') {
-                const len = drag.origEndSec - drag.origStartSec;
-                let newStart = Math.max(0, Math.min(dur - len, drag.origStartSec + dSec));
-                m.start = secondsToHMS(newStart);
-                m.end = secondsToHMS(newStart + len);
+                if (typeof laneDrag !== 'undefined' && laneDrag && laneDrag.overFid !== laneDrag.fid) {
+                    updatePlayerMarkers();
+                    return;
+                }
+                const g = drag.group || [{fid: drag.fieldId, m: m, s: drag.origStartSec, e: drag.origEndSec}];
+                const lo = Math.min.apply(null, g.map(x => x.s)), hi = Math.max.apply(null, g.map(x => x.e));
+                const d = Math.max(-lo, Math.min(dur - hi, dSec));       // keep the whole group inside the file
+                g.forEach(function(x) { x.m.start = secondsToHMS(x.s + d); x.m.end = secondsToHMS(x.e + d); });
+                markerSel = new Set(g.map(x => markerKey(x.fid, x.m)));
+                selectedMarkerKey = markerKey(drag.fieldId, m);
+                updatePlayerMarkers();
+                return;
             }
+            markerSel.delete(drag.key);
+            drag.key = markerKey(drag.fieldId, m);
+            markerSel.add(drag.key);
+            selectedMarkerKey = drag.key;
             updatePlayerMarkers();
         });
  
@@ -5293,11 +6017,21 @@ function updatePlayerMarkers() {
             const drag = activeMarkerDrag;
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
-            if (drag.moved) {
+            const toOtherLane = typeof laneDrag !== 'undefined' && laneDrag && laneDrag.overFid && laneDrag.overFid !== laneDrag.fid;
+            if (drag.moved && !toOtherLane) {          // a drop on another lane is saved by the lane strip
                 // Mark the marker so the next click handler ignores it (avoids snap-to-start)
                 if (drag.markerEl) drag.markerEl.dataset.justDragged = '1';
-                const st = markerFieldsState[drag.fieldId];
-                if (st) commitMarkerField(drag.fieldId, st.markers);
+                const fids = {};
+                fids[drag.fieldId] = 1;
+                (drag.group || []).forEach(function(x) { fids[x.fid] = 1; });
+                beginMarkerUndo();
+                Object.keys(fids).forEach(function(fid) {
+                    const st = markerFieldsState[fid];
+                    if (!st) return;
+                    st.markers.sort((a, b) => timeToSeconds(a.start) - timeToSeconds(b.start));
+                    commitMarkerField(fid, st.markers);
+                });
+                endMarkerUndo();
             }
             activeMarkerDrag = null;
         });
@@ -5512,6 +6246,7 @@ function updatePlayerMarkers() {
         }
         
         function loadFileMetadata(fileId) {
+            if (clapScores && clapScores.fileId !== fileId) hideClapScores();
             fetch('/api/file/' + fileId)
                 .then(r => r.json())
                 .then(file => {
@@ -5573,6 +6308,7 @@ function updatePlayerMarkers() {
                             markerFieldsState = {};
 
                             fields.forEach(field => {
+                                const htmlStart = html.length;
                                 const value = file.fields[field.name] || '';
                                 const hasValue = value !== '';
                                 const inactiveClass = hasValue ? '' : 'inactive';
@@ -5641,6 +6377,7 @@ function updatePlayerMarkers() {
 
                                     // Register this field in the multi-field state (preserve
                                     // visibility choice across re-renders; default to visible)
+                                    markerSnapshots[file.id + '|' + field.id] = JSON.stringify(markers);
                                     markerFieldsState[field.id] = {
                                         name: field.name,
                                         markers: markers,
@@ -5659,7 +6396,7 @@ function updatePlayerMarkers() {
                                     
                                     html += `
                                         <div class="form-group">
-                                            <label>${field.name}</label>
+                                            <label>${field.name} <button class="btn btn-small btn-secondary" style="padding: 1px 6px; margin-left: 6px; font-size: 10px;" onclick="openClapmark(${field.id})" title="Detect sounds with the installed plugins (CLAP, AST, ...)">Detect</button></label>
                                             <div class="markers-list" id="markers-${field.id}">
                                                 ${markers.map((m, i) => {
                                                     const color = markerColors.find(c => c.name === m.color) || markerColors[0];
@@ -5715,6 +6452,8 @@ function updatePlayerMarkers() {
                                         </div>
                                     `;
                                 }
+                                html = html.slice(0, htmlStart) + '<div class="mf-wrap' + (fieldCollapsed[field.id] ? ' collapsed' : '') +
+                                       '" data-fid="' + field.id + '">' + html.slice(htmlStart) + '</div>';
                             });
 
                             document.getElementById('metadata-panel').innerHTML = html;
@@ -5751,10 +6490,58 @@ function updatePlayerMarkers() {
             {name: 'Pink', bg: 'rgba(181, 97, 125, 0.30)', border: '#b5617d', text: '#f3f4f2'},
             {name: 'Orange', bg: 'rgba(196, 105, 42, 0.30)', border: '#c4692a', text: '#1a1c1d'},
             {name: 'Cyan', bg: 'rgba(63, 138, 140, 0.30)', border: '#3f8a8c', text: '#f3f4f2'},
+            {name: 'Grey', bg: 'rgba(124, 128, 131, 0.30)', border: '#7c8083', text: '#f3f4f2'},
+            {name: 'Teal', bg: 'rgba(47, 127, 115, 0.30)', border: '#2f7f73', text: '#f3f4f2'},
+            {name: 'Brown', bg: 'rgba(122, 82, 54, 0.30)', border: '#7a5236', text: '#f3f4f2'},
+            {name: 'Navy', bg: 'rgba(43, 63, 107, 0.30)', border: '#2b3f6b', text: '#f3f4f2'},
+            {name: 'Magenta', bg: 'rgba(162, 57, 126, 0.30)', border: '#a2397e', text: '#f3f4f2'},
+            {name: 'Lime', bg: 'rgba(127, 163, 58, 0.30)', border: '#7fa33a', text: '#1a1c1d'},
+            {name: 'Olive', bg: 'rgba(111, 113, 54, 0.30)', border: '#6f7136', text: '#f3f4f2'},
+            {name: 'Coral', bg: 'rgba(208, 106, 85, 0.30)', border: '#d06a55', text: '#1a1c1d'},
+            {name: 'Sky', bg: 'rgba(91, 155, 201, 0.30)', border: '#5b9bc9', text: '#1a1c1d'},
+            {name: 'Sand', bg: 'rgba(201, 178, 124, 0.30)', border: '#c9b27c', text: '#1a1c1d'},
+            {name: 'Black', bg: 'rgba(31, 32, 33, 0.30)', border: '#1f2021', text: '#f3f4f2'},
         ];
         
         function getMarkerColor(colorName) {
+            if (typeof colorName === 'string' && /^#[0-9a-fA-F]{6}$/.test(colorName)) {     // custom colour
+                var r = parseInt(colorName.substr(1, 2), 16), g = parseInt(colorName.substr(3, 2), 16), b = parseInt(colorName.substr(5, 2), 16);
+                var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                return {name: colorName, bg: 'rgba(' + r + ', ' + g + ', ' + b + ', 0.30)', border: colorName,
+                        text: lum > 0.6 ? '#1a1c1d' : '#f3f4f2'};
+            }
             return markerColors.find(c => c.name === colorName) || markerColors[0];
+        }
+
+        // Colour chooser used by the list and the lane strip: named swatches + any custom colour.
+        function openColorChooser(x, y, onPick) {
+            hideColorPicker();
+            const picker = document.createElement('div');
+            picker.className = 'color-picker-popup';
+            picker.id = 'color-picker-popup';
+            picker.style.left = x + 'px';
+            picker.style.top = y + 'px';
+            markerColors.forEach(c => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-picker-swatch';
+                swatch.style.background = c.border;
+                swatch.title = c.name;
+                swatch.onclick = () => { onPick(c.name); hideColorPicker(); };
+                picker.appendChild(swatch);
+            });
+            const custom = document.createElement('label');
+            custom.className = 'color-picker-swatch color-picker-custom';
+            custom.title = 'Custom colour...';
+            custom.textContent = '+';
+            const input = document.createElement('input');
+            input.type = 'color';
+            input.value = '#888888';
+            input.onchange = () => { onPick(input.value); hideColorPicker(); };
+            custom.appendChild(input);
+            picker.appendChild(custom);
+            document.body.appendChild(picker);
+            activeColorPicker = picker;
+            setTimeout(() => { document.addEventListener('click', hideColorPickerOnClickOutside); }, 10);
         }
         
        function formatTime(seconds) {
@@ -5825,6 +6612,827 @@ function updatePlayerMarkers() {
                 });
         }
         
+        // ---- Detect panel: runs the installed plugins (plugins/README.txt) ----
+        var clapFieldId = null;
+        var clapJob = null;
+        var clapLastEngine = null;
+        var clapPlugins = {};          // id -> manifest summary from /api/plugins
+
+        function clapEngine() { return document.getElementById('clap-engine').value; }
+        function clapPlugin() { return clapPlugins[clapEngine()] || null; }
+        function clapPluginName(id) { return (clapPlugins[id] && clapPlugins[id].name) || String(id).toUpperCase(); }
+        function clapWordsKey(engine) { return 'earmark_' + engine + '_words'; }
+
+        function clapLoadPlugins(done) {
+            fetch('/api/plugins').then(function(r) { return r.json(); }).then(function(list) {
+                clapPlugins = {};
+                var sel = document.getElementById('clap-engine'), cur = sel.value, html = '';
+                list.forEach(function(p) {
+                    clapPlugins[p.id] = p;
+                    if ((p.query || {}).kind === 'example') return;
+                    html += '<option value="' + escapeHtml(p.id) + '"' + (p.available ? '' : ' disabled') + '>' +
+                            escapeHtml(p.name) + (p.available ? '' : ' (not installed)') + '</option>';
+                });
+                sel.innerHTML = html || '<option value="">No plugins installed</option>';
+                var saved = null;
+                try { saved = localStorage.getItem('earmark_clap_engine'); } catch(e) {}
+                var ok = function(id) { return id && clapPlugins[id] && clapPlugins[id].available; };
+                var first = list.filter(function(p) { return p.available && (p.query || {}).kind !== 'example'; })[0];
+                var pick = ok(cur) ? cur : ok(saved) ? saved : (first ? first.id : '');
+                if (pick) sel.value = pick;
+                if (done) done();
+            }).catch(function() { if (done) done(); });
+        }
+
+        function clapHopFor(p, win) {
+            var w = (p && p.windows) || {};
+            if (w.hop_default !== undefined && w.hop_ratio === undefined) return w.hop_default;
+            return win * (w.hop_ratio !== undefined ? w.hop_ratio : 0.5);
+        }
+
+        function clapOptsValues() {
+            var p = clapPlugin(), out = {};
+            if (!p) return out;
+            (p.options || []).forEach(function(o) {
+                var el = document.getElementById('clap-opt-' + o.id);
+                if (!el) return;
+                var v = (o.type === 'bool') ? el.checked : el.value;
+                if (v !== '' && v !== null) out[o.id] = v;
+            });
+            try { localStorage.setItem('earmark_opts_' + p.id, JSON.stringify(out)); } catch(e) {}
+            return out;
+        }
+
+        function clapRenderOptions(p) {
+            var box = document.getElementById('clap-opts');
+            var saved = {};
+            try { saved = JSON.parse(localStorage.getItem('earmark_opts_' + p.id) || '{}'); } catch(e) {}
+            var html = '';
+            (p.options || []).forEach(function(o) {
+                var v = (o.id in saved) ? saved[o.id] : (o.default === null || o.default === undefined ? '' : o.default);
+                var id = 'clap-opt-' + o.id, lab = '<span>' + escapeHtml(o.label || o.id) + '</span> ';
+                if (o.type === 'bool') {
+                    html += '<label>' + '<input type="checkbox" id="' + id + '"' + (v ? ' checked' : '') + '> ' + escapeHtml(o.label || o.id) + '</label>';
+                } else if (o.type === 'choice') {
+                    html += '<label>' + lab + '<select id="' + id + '">' + (o.choices || []).map(function(c) {
+                        return '<option' + (String(c) === String(v) ? ' selected' : '') + '>' + escapeHtml(String(c)) + '</option>';
+                    }).join('') + '</select></label>';
+                } else {
+                    var t = (o.type === 'number' || o.type === 'int') ? 'number' : 'text';
+                    html += '<label>' + lab + '<input type="' + t + '" id="' + id + '" value="' + escapeHtml(String(v)) + '"' +
+                            (o.type === 'int' ? ' step="1"' : (t === 'number' ? ' step="any"' : '')) +
+                            (o.min !== undefined ? ' min="' + o.min + '"' : '') + (o.max !== undefined ? ' max="' + o.max + '"' : '') +
+                            ' style="width: ' + (t === 'number' ? '70px' : '120px') + '; font-size: 11px;"></label>';
+                }
+            });
+            box.innerHTML = html;
+            box.style.display = html ? 'flex' : 'none';
+        }
+
+        function clapEngineChanged() {
+            var engine = clapEngine();
+            var p = clapPlugin();
+            var box = document.getElementById('clap-words');
+            if (clapLastEngine && clapLastEngine !== engine) {
+                try { localStorage.setItem(clapWordsKey(clapLastEngine), box.value); } catch(e) {}
+            }
+            if (clapLastEngine !== engine) {
+                try { box.value = localStorage.getItem(clapWordsKey(engine)) || ''; } catch(e) { box.value = ''; }
+            }
+            clapLastEngine = engine;
+            var q = (p && p.query) || {};
+            box.placeholder = q.placeholder || '';
+            document.getElementById('clap-hint').textContent = p ? (q.help || '') :
+                'No plugins installed: put plugin folders in the plugins folder next to Earmark.';
+            var info = document.getElementById('clap-plugin-info');
+            info.textContent = p ? (p.description || '') : '';
+            info.title = p ? ((p.license || '') + (p.version ? '  (version ' + p.version + ')' : '')) : '';
+            document.getElementById('clap-try-box').style.display = (p && p.live && q.kind === 'text') ? 'flex' : 'none';
+            var ws = document.getElementById('clap-win'), prev = parseFloat(ws.value);
+            var w = (p && p.windows) || {choices: [1], default: 1};
+            var choices = w.choices || [w.default || 1];
+            ws.innerHTML = choices.map(function(c) {
+                return '<option value="' + c + '">' + c + ' s (hop ' + clapHopFor(p, c) + ')</option>';
+            }).join('');
+            ws.value = (choices.indexOf(prev) >= 0) ? prev : (w.default || choices[0]);
+            if (p) clapRenderOptions(p);
+            clapLiveReady = null;
+            try { localStorage.setItem('earmark_clap_engine', engine); } catch(e) {}
+        }
+
+        function clapSelectionOk() {
+            return !!(waveSel && waveSel.end - waveSel.start > 0.05 && currentWaveformFileId === selectedFileId);
+        }
+
+        function updateClapSelUI() {
+            var cb = document.getElementById('clap-sel'), lab = document.getElementById('clap-sel-label');
+            if (!cb || !lab) return;
+            var ok = clapSelectionOk();
+            cb.disabled = !ok;
+            if (!ok) cb.checked = false;
+            lab.textContent = ok
+                ? 'Only the selection (' + secondsToHMS(waveSel.start).slice(3) + ' - ' + secondsToHMS(waveSel.end).slice(3) + ')'
+                : 'Only the selection (select a range in the waveform or spectrogram first)';
+        }
+        document.addEventListener('mouseup', function() { setTimeout(updateClapSelUI, 0); });
+
+        function openClapmark(fieldId) {
+            clapFieldId = fieldId;
+            var f = allFields.find(function(x) { return x.id === fieldId; });
+            document.getElementById('clap-title').textContent = 'Detect: ' + (f ? f.name : '');
+            clapLoadPlugins(function() { clapEngineChanged(); updateClapSelUI(); });
+            if (!clapJob) document.getElementById('clap-status').textContent = '';
+            document.getElementById('clap-panel').style.display = 'flex';
+            loadClapScores(selectedFileId, fieldId);
+            clapFillRename();
+            if (!clapLiveBusy && clapLiveReady !== clapLiveKey()) setTryStatus('Type a phrase to start. The ' + clapPluginName(clapEngine()) + ' helper loads on first use.');
+        }
+
+        function toggleClapPanelBody() {
+            var p = document.getElementById('clap-panel');
+            p.classList.toggle('folded');
+            document.getElementById('clap-fold-btn').innerHTML = p.classList.contains('folded') ? '&#9633;' : '&#8211;';
+        }
+
+        (function initClapPanelDrag() {
+            var panel = document.getElementById('clap-panel');
+            if (!panel) return;
+            var head = panel.querySelector('.linked-file-panel-header');
+            var drag = null;
+            head.addEventListener('mousedown', function(e) {
+                if (e.target.closest('button')) return;
+                var r = panel.getBoundingClientRect();
+                drag = {dx: e.clientX - r.left, dy: e.clientY - r.top};
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function(e) {
+                if (!drag) return;
+                panel.style.left = Math.max(0, Math.min(window.innerWidth - 80, e.clientX - drag.dx)) + 'px';
+                panel.style.top = Math.max(0, Math.min(window.innerHeight - 30, e.clientY - drag.dy)) + 'px';
+                panel.style.right = 'auto';
+            });
+            document.addEventListener('mouseup', function() { drag = null; });
+        })();
+
+        function closeClapmark() {
+            document.getElementById('clap-panel').style.display = 'none';
+        }
+
+        function setClapStatus(msg) {
+            document.getElementById('clap-status').textContent = msg;
+        }
+
+        function runClapmark() {
+            if (!selectedFileId || clapFieldId === null) { setClapStatus('Select a file first.'); return; }
+            var engine = clapEngine();
+            var words = document.getElementById('clap-words').value.trim();
+            var plug = clapPlugin();
+            if (!plug) { setClapStatus('No plugin selected.'); return; }
+            var pq = plug.query || {};
+            if (!words && pq.kind !== 'none' && !pq.discover) { setClapStatus('Enter at least one sound.'); return; }
+            try { localStorage.setItem(clapWordsKey(engine), words); } catch(e) {}
+            var body = {file_id: selectedFileId, field_id: clapFieldId, words: words, engine: engine,
+                        win: parseFloat(document.getElementById('clap-win').value), opts: clapOptsValues()};
+            if (document.getElementById('clap-sel').checked && clapSelectionOk()) {
+                body.start = waveSel.start;
+                body.end = waveSel.end;
+            }
+            var btn = document.getElementById('clap-run-btn');
+            btn.disabled = true;
+            if (document.activeElement) document.activeElement.blur();
+            setClapStatus('Starting...');
+            var fileId = selectedFileId;
+            fetch('/api/clapmark/run', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok) { btn.disabled = false; setClapStatus('Error: ' + d.error); return; }
+                clapJob = d.job;
+                pollClapmark(fileId);
+            })
+            .catch(function(err) { btn.disabled = false; setClapStatus('Request failed: ' + err.message); });
+        }
+
+        function pollClapmark(fileId) {
+            fetch('/api/clapmark/status/' + clapJob)
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    setClapStatus(d.message || '');
+                    if (d.state === 'running') {
+                        setTimeout(function() { pollClapmark(fileId); }, 700);
+                        return;
+                    }
+                    clapJob = null;
+                    document.getElementById('clap-run-btn').disabled = false;
+                    if (d.state === 'done' && selectedFileId === fileId) {
+                        clapActiveKey = null;
+                        loadFileMetadata(fileId);
+                        loadClapScores(fileId, clapFieldId);
+                    }
+                })
+                .catch(function() { setTimeout(function() { pollClapmark(fileId); }, 1500); });
+        }
+
+        function clearClapmark() {
+            if (!selectedFileId || clapFieldId === null) return;
+            var fileId = selectedFileId;
+            fetch('/api/clapmark/clear', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({file_id: fileId, field_id: clapFieldId})
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                setClapStatus(d.ok ? ('Removed ' + d.removed + ' plugin marker(s) and the score curves.') : ('Error: ' + d.error));
+                hideClapScores();
+                loadFileMetadata(fileId);
+            });
+        }
+
+        // ---- CLAP / AST score strip: one curve per label and run, draggable threshold ----
+        var clapScores = null;    // {fileId, fieldId, data}
+        var clapActive = 0;
+        var clapActiveKey = null;
+        var clapDrag = null;      // {open: value} while dragging
+
+        function clapLabs() {
+            return clapScores ? (clapScores.data.labels || []).concat(clapScores.tries || []) : [];
+        }
+
+        function clapSetRange(l) {
+            var lo = Infinity, hi = -Infinity;
+            l.values.forEach(function(v) { if (v < lo) lo = v; if (v > hi) hi = v; });
+            lo = Math.min(lo, l.open - l.offset);
+            hi = Math.max(hi, l.open);
+            var pad = (hi - lo) * 0.08 || 0.02;
+            l.ymin = lo - pad;
+            l.ymax = hi + pad;
+        }
+
+        function loadClapScores(fileId, fieldId) {
+            if (!fileId || fieldId === null || fieldId === undefined) return;
+            fetch('/api/clapmark/scores?file_id=' + fileId + '&field_id=' + fieldId)
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    var same = clapScores && clapScores.fileId === fileId && clapScores.fieldId === fieldId;
+                    var tries = same ? (clapScores.tries || []) : [];
+                    var data = (d.ok && d.data) ? d.data : {duration: same ? clapScores.data.duration : null, colors: {}, labels: []};
+                    if (!data.labels.length && !tries.length) {
+                        if (same) hideClapScores();
+                        return;
+                    }
+                    data.labels.forEach(clapSetRange);
+                    if (!data.duration && tries.length) data.duration = clapScores.data.duration;
+                    clapScores = {fileId: fileId, fieldId: fieldId, data: data, tries: tries};
+                    clapShowStrip();
+                });
+        }
+
+        function clapShowStrip() {
+            var all = clapLabs();
+            var idx = -1;
+            all.forEach(function(l, i) { if (l.key === clapActiveKey) idx = i; });
+            clapActive = idx >= 0 ? idx : all.length - 1;     // newest by default
+            clapActiveKey = all[clapActive].key;
+            if (currentWaveformFileId !== clapScores.fileId && audioPlayer.paused) clapLoadIntoPlayer(clapScores.fileId);
+            document.getElementById('clap-scores').style.display = 'block';
+            renderClapChips();
+            drawClapScores();
+        }
+
+        // ---- Live CLAP: the helper keeps the model and this file's analysis in memory ----
+        var clapLiveReady = null;        // 'fileId|win' that the helper has ready
+        var clapLiveBusy = false;
+        var clapLiveWaiting = [];
+        var clapTryTimer = null;
+
+        function setTryStatus(msg) {
+            var el = document.getElementById('clap-try-status');
+            if (el) el.textContent = msg;
+            if (clapSimAnalysing) setSimStatus(msg);
+        }
+        function clapLiveKey() { return clapEngine() + '|' + selectedFileId + '|' + parseFloat(document.getElementById('clap-win').value); }
+
+        function clapLiveAnalyse() {
+            document.getElementById('clap-try-analyse').style.display = 'none';
+            clapLiveEnsure(null, true);
+        }
+
+        function clapLiveEnsure(cb, analyse, pid) {
+            if (!selectedFileId) return;
+            pid = pid || clapEngine();
+            var key = pid + '|' + selectedFileId + '|' + parseFloat(document.getElementById('clap-win').value);
+            if (clapLiveReady === key) { if (cb) cb(); return; }
+            if (cb) clapLiveWaiting.push(cb);
+            if (clapLiveBusy) return;
+            clapLiveBusy = true;
+            document.getElementById('clap-try-analyse').style.display = 'none';
+            setTryStatus(analyse ? 'Starting the analysis...' : 'Loading the ' + clapPluginName(pid) + ' helper (about 10 s the first time)...');
+            var finish = function(ok, msg) {
+                clapLiveBusy = false;
+                setTryStatus(msg);
+                var waiting = clapLiveWaiting;
+                clapLiveWaiting = [];
+                if (ok) {
+                    clapLiveReady = key;
+                    waiting.forEach(function(f) { f(); });
+                }
+            };
+            var poll = function(job) {
+                fetch('/api/clapmark/live/status/' + job + '?plugin=' + encodeURIComponent(pid)).then(function(r) { return r.json(); }).then(function(st) {
+                    if (st.state === 'running') { setTryStatus(st.message || 'Analysing...'); setTimeout(function() { poll(job); }, 600); }
+                    else if (st.state === 'done') finish(true, 'Ready: type a phrase.');
+                    else finish(false, st.message || clapPluginName(pid) + ' helper error');
+                }).catch(function() { finish(false, 'Lost contact with the ' + clapPluginName(pid) + ' helper.'); });
+            };
+            fetch('/api/clapmark/live/prepare', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({file_id: selectedFileId, win: parseFloat(document.getElementById('clap-win').value),
+                                      analyse: !!analyse, plugin: pid, opts: clapOptsValues()})
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (!d.ok) finish(false, 'Error: ' + d.error);
+                else if (d.ready) finish(true, 'Ready: type a phrase.');
+                else if (d.needs_analysis) {
+                    clapLiveBusy = false;          // keep the waiting phrase; it runs once the analysis is done
+                    var est = d.windows * 0.1;      // ~100 ms per window on an Apple-silicon GPU
+                    setTryStatus('This file has not been analysed at this window size yet: ' + d.windows +
+                                 ' windows, about ' + (est < 60 ? 'a minute' : Math.round(est / 60) + ' min') +
+                                 '. Done once, then instant.');
+                    document.getElementById('clap-try-analyse').style.display = '';
+                }
+                else poll(d.job);
+            }).catch(function(e) { finish(false, 'Error: ' + e.message); });
+        }
+
+        // ---- Find similar: every installed model that can do it adds a candidate curve ----
+        var clapSimPending = null, clapSimAnalysing = false;
+        function setSimStatus(msg) { var el = document.getElementById('clap-sim-status'); if (el) el.textContent = msg; }
+
+        function clapSimExamples() {
+            var ex = markerSelItems().map(function(it) { return [timeToSeconds(it.m.start), timeToSeconds(it.m.end)]; });
+            if (!ex.length && waveSel && waveSel.end - waveSel.start > 0.05) ex = [[waveSel.start, waveSel.end]];
+            return ex;
+        }
+
+        var clapSimLines = {};
+        function clapFindSimilar(again) {
+            if (!selectedFileId || clapFieldId === null) { setSimStatus('Open the panel from a markers lane first.'); return; }
+            var ex = again ? again.examples : clapSimExamples();
+            if (!ex.length) { setSimStatus('Select one or more markers (or a range) as examples first.'); return; }
+            var items = markerSelItems();
+            var label = again ? again.label : (document.getElementById('clap-sim-label').value.trim() ||
+                        (items.length ? clapBaseLabel(items[0].m.label) : 'similar'));
+            var plugs = Object.keys(clapPlugins).map(function(k) { return clapPlugins[k]; })
+                              .filter(function(p) { return p.available && p.similar && (!again || p.id === again.plugin); });
+            if (!plugs.length) { setSimStatus('No installed plugin can find similar sounds.'); return; }
+            document.getElementById('clap-sim-analyse').style.display = 'none';
+            if (!again) clapSimLines = {};
+            clapSimAnalysing = false;
+            var fileId = selectedFileId, lines = clapSimLines;
+            plugs.forEach(function(p) { delete lines[p.id]; });
+            var all = Object.keys(clapPlugins).map(function(k) { return clapPlugins[k]; }).filter(function(p) { return p.available && p.similar; });
+            var show = function() { setSimStatus(all.map(function(p) { return p.name + ': ' + (lines[p.id] || 'working...'); }).join('\\n')); };
+            show();
+            plugs.forEach(function(p) {
+                var t = Date.now();
+                fetch('/api/clapmark/similar', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file_id: fileId, plugin: p.id, label: label, examples: ex,
+                                          win: parseFloat(document.getElementById('clap-win').value) || 1})
+                }).then(function(r) { return r.json(); }).then(function(d) {
+                    if (selectedFileId !== fileId) return;
+                    if (d.needs_analysis) {
+                        lines[p.id] = 'this file needs analysing first (' + d.windows + ' windows, done once).';
+                        clapSimPending = {plugin: p.id, examples: ex, label: label};
+                        var ab = document.getElementById('clap-sim-analyse');
+                        ab.textContent = 'Analyse for ' + p.name;
+                        ab.style.display = '';
+                    } else if (!d.ok) {
+                        lines[p.id] = 'error: ' + d.error;
+                    } else {
+                        clapSimAdd(d, label, ex.length);
+                        lines[p.id] = 'curve added (' + (Date.now() - t) + ' ms).';
+                    }
+                    show();
+                }).catch(function(e) { lines[p.id] = 'error: ' + e.message; show(); });
+            });
+        }
+
+        function clapSimAdd(d, label, nEx) {
+            var vals = d.values.slice();
+            var sorted = vals.slice().sort(function(a, b) { return a - b; });
+            var p95 = sorted[Math.floor(0.95 * (sorted.length - 1))], med = sorted[Math.floor(0.5 * (sorted.length - 1))];
+            var open = (d.default_threshold !== null && d.default_threshold !== undefined) ? d.default_threshold : Math.round(p95 * 1000) / 1000;
+            var e = {key: 'try:' + label + '|similar|' + d.plugin, label: label,
+                     phrase: 'similar to ' + nEx + ' example' + (nEx === 1 ? '' : 's') + ' (' + d.name + ')',
+                     engine: d.plugin, isTry: true, preview: false, values: vals, win: d.win, hop: d.hop,
+                     gap: d.gap || 0, min_dur: d.min_dur || 0, span: d.span || null, offset: Math.max(0.01, Math.min(0.1, (open - med) * 0.5)),
+                     t0: d.t0 || 0, t_end: d.t_end || d.duration, open: open};
+            clapSetRange(e);
+            clapTryPut(e, {duration: d.duration});
+        }
+
+        function clapSimAnalyse() {
+            if (!clapSimPending) return;
+            var pend = clapSimPending, pid = pend.plugin;
+            document.getElementById('clap-sim-analyse').style.display = 'none';
+            setSimStatus('Analysing for ' + clapPluginName(pid) + '...');
+            clapSimAnalysing = true;
+            clapLiveEnsure(function() { clapSimAnalysing = false; clapSimPending = null; clapFindSimilar(pend); }, true, pid);
+        }
+
+        function clapTryScore(phrase, done) {
+            clapLiveEnsure(function() {
+                fetch('/api/clapmark/live/score', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file_id: selectedFileId, win: parseFloat(document.getElementById('clap-win').value), phrases: [phrase],
+                                          plugin: clapEngine(), opts: clapOptsValues()})
+                }).then(function(r) { return r.json(); }).then(function(d) {
+                    if (!d.ok) {
+                        if (d.error === 'not prepared') { clapLiveReady = null; setTryStatus('Reloading the analysis...'); clapTryScore(phrase, done); return; }
+                        setTryStatus('Error: ' + d.error);
+                        return;
+                    }
+                    done(d);
+                });
+            });
+        }
+
+        function clapTryEntry(d, label, phrase, preview) {
+            var vals = d.values[phrase], hop = d.hop, win = d.win, t0 = 0, tEnd = d.duration;
+            if (document.getElementById('clap-sel').checked && clapSelectionOk()) {
+                var i0 = Math.max(0, Math.floor(waveSel.start / hop + 1e-9));
+                var i1 = Math.min(vals.length - 1, Math.max(i0, Math.ceil((waveSel.end - win) / hop)));
+                vals = vals.slice(i0, i1 + 1);
+                t0 = i0 * hop;
+                tEnd = Math.min(d.duration, waveSel.end);
+            }
+            var sorted = vals.slice().sort(function(a, b) { return a - b; });
+            var p95 = sorted[Math.floor(0.95 * (sorted.length - 1))], med = sorted[Math.floor(0.5 * (sorted.length - 1))];
+            var open = Math.round(Math.min(0.22, p95) * 1000) / 1000;
+            var e = {key: preview ? 'preview' : 'try:' + label + '|' + phrase + '|' + t0, label: label, phrase: phrase,
+                     engine: clapEngine(), isTry: true, preview: !!preview, values: vals, win: win, hop: hop,
+                     gap: 0.5, min_dur: 0.5, offset: Math.min(0.05, Math.max(0.01, (open - med) * 0.5)),
+                     t0: t0, t_end: tEnd, open: open};
+            clapSetRange(e);
+            return e;
+        }
+
+        function clapTryPut(entry, d) {
+            if (!clapScores || clapScores.fileId !== selectedFileId || clapScores.fieldId !== clapFieldId) {
+                clapScores = {fileId: selectedFileId, fieldId: clapFieldId, data: {duration: d.duration, colors: {}, labels: []}, tries: []};
+            }
+            if (!clapScores.data.duration) clapScores.data.duration = d.duration;
+            var tries = clapScores.tries;
+            for (var i = tries.length - 1; i >= 0; i--) {
+                if (tries[i].key === entry.key || (!entry.preview && tries[i].preview)) tries.splice(i, 1);
+            }
+            tries.push(entry);
+            clapActiveKey = entry.key;
+            clapShowStrip();
+        }
+
+        function clapTryLabel(phrase) {
+            var l = document.getElementById('clap-try-label').value.trim();
+            return l || phrase;
+        }
+
+        function clapTryInput() {
+            clearTimeout(clapTryTimer);
+            clapTryTimer = setTimeout(function() {
+                var phrase = document.getElementById('clap-try-phrase').value.trim();
+                if (!phrase) return;
+                var t = Date.now();
+                clapTryScore(phrase, function(d) {
+                    if (document.getElementById('clap-try-phrase').value.trim() !== phrase) return;   // typed on
+                    clapTryPut(clapTryEntry(d, clapTryLabel(phrase), phrase, true), d);
+                    setTryStatus('"' + phrase + '": ' + (Date.now() - t) + ' ms. Enter keeps it to compare.');
+                });
+            }, 300);
+        }
+
+        function clapTryKeep() {
+            clearTimeout(clapTryTimer);
+            var phrase = document.getElementById('clap-try-phrase').value.trim();
+            if (!phrase) { setTryStatus('Type a phrase first.'); return; }
+            clapTryScore(phrase, function(d) {
+                clapTryPut(clapTryEntry(d, clapTryLabel(phrase), phrase, false), d);
+                setTryStatus('Kept "' + phrase + '". Drag its threshold, then Make markers.');
+            });
+        }
+
+        function clapTryDiscard() {
+            var l = clapLabs()[clapActive];
+            if (!l || !l.isTry) return;
+            clapScores.tries = clapScores.tries.filter(function(t) { return t !== l; });
+            clapActiveKey = null;
+            if (!clapLabs().length) { hideClapScores(); return; }
+            clapShowStrip();
+        }
+
+        function clapTryCommit() {
+            var cs = clapScores, l = clapLabs()[clapActive];
+            if (!cs || !l || !l.isTry) return;
+            var events = clapDetect(l, l.open, cs.data.duration).map(function(e) { return {start: e[0], end: e[1], score: e[2]}; });
+            fetch('/api/clapmark/commit', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({file_id: cs.fileId, field_id: cs.fieldId, label: l.label, phrase: l.phrase, open: l.open,
+                                      engine: l.engine || 'clap',
+                                      events: events, duration: cs.data.duration,
+                                      entry: {values: l.values, win: l.win, hop: l.hop, gap: l.gap, min_dur: l.min_dur,
+                                              offset: l.offset, span: l.span || null, t0: l.t0, t_end: l.t_end}})
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (!d.ok) { setTryStatus('Error: ' + d.error); return; }
+                cs.tries = cs.tries.filter(function(t) { return t !== l; });
+                clapActiveKey = (l.engine || 'clap') + ':' + l.label;
+                setTryStatus('Made ' + d.added + ' "' + l.label + '" marker(s) from "' + l.phrase + '".');
+                loadFileMetadata(cs.fileId);
+                loadClapScores(cs.fileId, cs.fieldId);
+            });
+        }
+
+        function clapBase(label) {
+            label = label || '';
+            return label.charAt(label.length - 1) === '?' ? label.slice(0, -1) : label;
+        }
+
+        function clapFillRename(prefer) {
+            var sel = document.getElementById('clap-ren-old');
+            if (!sel) return;
+            var cur = prefer || sel.value;
+            var st = markerFieldsState[clapFieldId];
+            var names = {};
+            (st ? st.markers : []).forEach(function(m) { var b = clapBase(m.label); if (b) names[b] = 1; });
+            var list = Object.keys(names).sort();
+            sel.innerHTML = list.map(function(n) { return '<option>' + escapeHtml(n) + '</option>'; }).join('');
+            if (cur && names[cur]) sel.value = cur;
+        }
+
+        function clapRenamePrefill(i) {
+            var l = clapLabs()[i];
+            if (!l) return;
+            if (document.getElementById('clap-panel').style.display === 'none' && clapScores) openClapmark(clapScores.fieldId);
+            clapFillRename(l.label);
+            var inp = document.getElementById('clap-ren-new');
+            inp.value = l.label;
+            inp.focus();
+            inp.select();
+        }
+
+        function clapRename() {
+            var oldName = document.getElementById('clap-ren-old').value;
+            var newName = document.getElementById('clap-ren-new').value.trim();
+            if (!oldName || !newName || oldName === newName || !selectedFileId || clapFieldId === null) return;
+            var fileId = selectedFileId, fieldId = clapFieldId;
+            fetch('/api/clapmark/rename', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({file_id: fileId, field_id: fieldId, old: oldName, 'new': newName})
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (!d.ok) { setClapStatus('Error: ' + d.error); return; }
+                if (clapScores && clapScores.tries) clapScores.tries.forEach(function(t) { if (t.label === oldName) { t.label = newName; if (!t.preview) t.key = 'try:' + newName + '|' + t.phrase + '|' + t.t0; } });
+                if (clapActiveKey) clapActiveKey = clapActiveKey.split(':' + oldName).join(':' + newName);
+                setClapStatus('Renamed ' + d.renamed + ' marker(s): "' + oldName + '" is now "' + newName + '".');
+                document.getElementById('clap-ren-new').value = '';
+                loadFileMetadata(fileId);
+                loadClapScores(fileId, fieldId);
+                setTimeout(function() { clapFillRename(newName); }, 600);
+            });
+        }
+
+        // Load a file into the player and waveform without starting playback.
+        function clapLoadIntoPlayer(fileId) {
+            var file = allFiles.find(function(f) { return f.id === fileId; });
+            audioPlayer.pause();
+            audioPlayer.src = '/api/audio/' + fileId;
+            currentPlayingId = fileId;
+            showPlayerBar(file ? file.filename : 'Unknown');
+            document.getElementById('player-play-btn').textContent = '▶';
+            loadWaveform(fileId);
+            loadAudioInfo(fileId);
+            renderFiles();
+            audioPlayer.addEventListener('loadedmetadata', function onMeta() {
+                audioPlayer.removeEventListener('loadedmetadata', onMeta);
+                redrawWaveformView();
+            });
+        }
+
+        function hideClapScores() {
+            clapScores = null;
+            clapDrag = null;
+            var el = document.getElementById('clap-scores');
+            if (el) el.style.display = 'none';
+        }
+
+        function clapLabelColor(l) {
+            var cols = (clapScores && clapScores.data.colors) || {};
+            var c = l.isTry ? (cols[(l.engine || 'clap') + ':' + l.label] || 'Grey') : cols[l.key];
+            return getMarkerColor(c || 'Cyan');
+        }
+
+        function clapIsPart(l) {
+            return (l.t0 || 0) > 0.001 || (l.t_end && clapScores && l.t_end < clapScores.data.duration - 0.01);
+        }
+
+        function renderClapChips() {
+            if (!clapScores) return;
+            var html = '';
+            clapLabs().forEach(function(l, i) {
+                var col = clapLabelColor(l);
+                var st = 'border-color:' + col.border + ';' + (i === clapActive ? 'background:' + col.border + ';color:' + col.text + ';' : '');
+                var tags = (l.engine && l.engine !== 'clap' ? '<small>' + escapeHtml(clapPluginName(l.engine)) + '</small>' : '') +
+                           (clapIsPart(l) ? '<small>part</small>' : '');
+                var text = escapeHtml(l.label);
+                if (l.isTry) {
+                    var ph = l.phrase.length > 28 ? l.phrase.slice(0, 27) + '...' : l.phrase;
+                    text += '<small>' + escapeHtml(ph) + '</small>';
+                }
+                var cls = 'clap-chip' + (l.isTry ? ' try' : '') + (l.preview ? ' preview' : '');
+                var tip = l.isTry ? ' title="' + escapeHtml(l.phrase) + '"' : (l.phrase ? ' title="' + escapeHtml(l.phrase) + '"' : '');
+                html += '<button class="' + cls + '" style="' + st + '"' + tip + ' onclick="setClapActive(' + i + ')" ondblclick="clapRenamePrefill(' + i + ')">' + text + tags + '</button>';
+            });
+            document.getElementById('clap-scores-chips').innerHTML = html;
+            var actL = clapLabs()[clapActive];
+            document.getElementById('clap-try-make').style.display = (actL && actL.isTry) ? '' : 'none';
+            document.getElementById('clap-try-discard').style.display = (actL && actL.isTry) ? '' : 'none';
+            updateClapThrText();
+        }
+
+        function setClapActive(i) {
+            clapActive = i;
+            clapActiveKey = clapLabs()[i].key;
+            renderClapChips();
+            drawClapScores();
+        }
+
+        function clapDetect(l, open, dur) {
+            var v = l.values, close = open - l.offset, n = v.length, win = l.win, hop = l.hop;
+            var t0 = l.t0 || 0, tEnd = l.t_end || dur, ev = [], i = 0;
+            while (i < n) {
+                if (v[i] >= close) {
+                    var j = i, pk = v[i];
+                    while (j + 1 < n && v[j + 1] >= close) { j++; if (v[j] > pk) pk = v[j]; }
+                    if (pk >= open) {
+                        var s0 = (i === 0) ? t0 : t0 + i * hop + win / 2 - hop / 2;
+                        var e0 = (j === n - 1) ? tEnd : t0 + j * hop + win / 2 + hop / 2;
+                        if (l.span === 'window') { s0 = t0 + i * hop; e0 = t0 + j * hop + win; }
+                        ev.push([Math.max(t0, s0), Math.min(tEnd, e0), pk]);
+                    }
+                    i = j + 1;
+                } else {
+                    i++;
+                }
+            }
+            var merged = [];
+            ev.forEach(function(e) {
+                var last = merged[merged.length - 1];
+                if (last && e[0] - last[1] <= l.gap) { last[1] = Math.max(last[1], e[1]); last[2] = Math.max(last[2], e[2]); }
+                else merged.push(e.slice());
+            });
+            return merged.filter(function(e) { return e[1] - e[0] >= l.min_dur; });
+        }
+
+        function clapActiveOpen() {
+            var l = clapLabs()[clapActive];
+            return clapDrag ? clapDrag.open : l.open;
+        }
+
+        function updateClapThrText() {
+            var el = document.getElementById('clap-scores-thr');
+            if (!clapScores || !el) return;
+            var l = clapLabs()[clapActive];
+            var open = clapActiveOpen();
+            var n = clapDetect(l, open, clapScores.data.duration).length;
+            el.textContent = l.label + (l.engine && l.engine !== 'clap' ? ' (' + clapPluginName(l.engine) + ')' : '') + ' >= ' + open.toFixed(3) + '  (' + n + ' marker' + (n === 1 ? '' : 's') + ')';
+        }
+
+        function drawClapScores() {
+            if (!clapScores) return;
+            var canvas = document.getElementById('clap-scores-canvas');
+            var container = document.getElementById('player-progress-container');
+            if (!canvas || !container) return;
+            var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+            var cssW = container.clientWidth - 2, cssH = 80;
+            canvas.style.width = cssW + 'px';
+            canvas.width = Math.max(1, Math.round(cssW * dpr));
+            canvas.height = Math.round(cssH * dpr);
+            var ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, cssW, cssH);
+            var css = getComputedStyle(document.documentElement);
+            var ink = css.getPropertyValue('--wave-label').trim() || 'rgba(82,85,79,0.9)';
+            var font = css.getPropertyValue('--font-mono').trim() || 'monospace';
+            ctx.font = '10px ' + font;
+            if (currentWaveformFileId !== clapScores.fileId) {
+                ctx.fillStyle = ink;
+                ctx.fillText('Click here to load this file in the player and see its scores.', 8, 40);
+                return;
+            }
+            var dur = clapScores.data.duration;
+            var tv0 = waveformOffset * dur, span = dur / waveformZoom;
+            function X(t) { return (t - tv0) / span * cssW; }
+            function Y(v, l) { return cssH - (v - l.ymin) / (l.ymax - l.ymin) * cssH; }
+            var labs = clapLabs();
+            var act = labs[clapActive];
+            var col = clapLabelColor(act);
+            var open = clapActiveOpen();
+
+            // analysed range of a partial run
+            if (clapIsPart(act)) {
+                ctx.fillStyle = 'rgba(0,0,0,0.06)';
+                var ra = X(act.t0 || 0), rb = X(act.t_end || dur);
+                if (ra > 0) ctx.fillRect(0, 0, Math.min(cssW, ra), cssH);
+                if (rb < cssW) ctx.fillRect(Math.max(0, rb), 0, cssW - Math.max(0, rb), cssH);
+            }
+
+            // detected spans of the active label (live while dragging)
+            ctx.fillStyle = col.bg;
+            clapDetect(act, open, dur).forEach(function(e) {
+                var a = X(e[0]), b = X(e[1]);
+                if (b >= 0 && a <= cssW) ctx.fillRect(a, 0, Math.max(1, b - a), cssH);
+            });
+
+            // curves, each on its own scale: inactive faint, active on top
+            var order = [];
+            labs.forEach(function(l, k) { if (k !== clapActive) order.push(k); });
+            order.push(clapActive);
+            order.forEach(function(k) {
+                var l = labs[k], t0 = l.t0 || 0;
+                var i0 = Math.max(0, Math.floor((tv0 - t0 - l.win) / l.hop));
+                var i1 = Math.min(l.values.length - 1, Math.ceil((tv0 + span - t0) / l.hop) + 1);
+                if (i1 < i0) return;
+                ctx.strokeStyle = clapLabelColor(l).border;
+                ctx.globalAlpha = (k === clapActive) ? 1 : 0.35;
+                ctx.lineWidth = (k === clapActive) ? 1.5 : 1;
+                ctx.setLineDash((l.isTry && k !== clapActive) ? [3, 2] : []);
+                ctx.beginPath();
+                for (var i = i0; i <= i1; i++) {
+                    var x = X(t0 + i * l.hop + l.win / 2), y = Y(l.values[i], l);
+                    if (i === i0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            });
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1;
+
+            // threshold lines of the active label: open (solid), close (dashed)
+            ctx.strokeStyle = col.border;
+            ctx.lineWidth = 1;
+            var yo = Math.round(Y(open, act)) + 0.5, yc = Math.round(Y(open - act.offset, act)) + 0.5;
+            ctx.beginPath(); ctx.moveTo(0, yo); ctx.lineTo(cssW, yo); ctx.stroke();
+            ctx.setLineDash([4, 3]);
+            ctx.beginPath(); ctx.moveTo(0, yc); ctx.lineTo(cssW, yc); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = ink;
+            ctx.fillText(open.toFixed(3), 4, Math.max(10, yo - 3));
+        }
+
+        function clapValueAtY(clientY) {
+            var r = document.getElementById('clap-scores-canvas').getBoundingClientRect();
+            var l = clapLabs()[clapActive];
+            var f = Math.max(0, Math.min(1, (clientY - r.top) / r.height));
+            return l.ymax - f * (l.ymax - l.ymin);
+        }
+
+        document.addEventListener('mousedown', function(e) {
+            if (!clapScores || e.target.id !== 'clap-scores-canvas') return;
+            e.preventDefault();
+            if (currentWaveformFileId !== clapScores.fileId) { clapLoadIntoPlayer(clapScores.fileId); return; }
+            clapDrag = {open: clapValueAtY(e.clientY)};
+            updateClapThrText();
+            drawClapScores();
+        });
+        document.addEventListener('mousemove', function(e) {
+            if (!clapDrag) return;
+            clapDrag.open = clapValueAtY(e.clientY);
+            updateClapThrText();
+            drawClapScores();
+        });
+        document.addEventListener('mouseup', function() {
+            if (!clapDrag || !clapScores) return;
+            var cs = clapScores, l = clapLabs()[clapActive];
+            l.open = Math.round(clapDrag.open * 1000) / 1000;
+            clapDrag = null;
+            if (l.isTry) { updateClapThrText(); drawClapScores(); return; }
+            var events = clapDetect(l, l.open, cs.data.duration).map(function(e) {
+                return {start: e[0], end: e[1], score: e[2]};
+            });
+            updateClapThrText();
+            drawClapScores();
+            fetch('/api/clapmark/replace', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({file_id: cs.fileId, field_id: cs.fieldId, key: l.key, open: l.open, events: events})
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.ok) { alert('Could not update markers: ' + d.error); return; }
+                if (selectedFileId === cs.fileId) loadFileMetadata(cs.fileId);
+            });
+        });
+
         // Data link functions
         function setDataLink(fieldId) {
             const path = document.getElementById(`datalink-${fieldId}`).value.trim();
@@ -6401,7 +8009,7 @@ function updatePlayerMarkers() {
         }
         
         function consoleRunCmd(cmd) {
-            var parts = cmd.split(/\s+/);
+            var parts = cmd.split(/\\s+/);
             var command = parts[0].toLowerCase();
             
             if (command === 'help') {
@@ -7590,23 +9198,373 @@ def audio_info(file_id):
 
     return jsonify(info)
 
+# ---- Audio file lengths from headers (no decoding) --------------------------------
+_DUR_CACHE = {}
+
+
+def _ext80(b):
+    """80-bit IEEE extended float (AIFF sample rate)."""
+    exp = ((b[0] & 0x7F) << 8) | b[1]
+    mant = int.from_bytes(b[2:10], 'big')
+    if exp == 0 and mant == 0:
+        return 0.0
+    return (-1 if b[0] & 0x80 else 1) * mant * 2.0 ** (exp - 16383 - 63)
+
+
+def _aiff_duration(fp):
+    import struct as _st
+    with open(fp, 'rb') as f:
+        h = f.read(12)
+        if h[:4] != b'FORM' or h[8:12] not in (b'AIFF', b'AIFC'):
+            return None
+        while True:
+            ch = f.read(8)
+            if len(ch) < 8:
+                return None
+            cid, size = ch[:4], _st.unpack('>I', ch[4:])[0]
+            if cid == b'COMM':
+                d = f.read(18)
+                frames = _st.unpack('>I', d[2:6])[0]
+                rate = _ext80(d[8:18])
+                return frames / rate if rate > 0 else None
+            f.seek(size + (size & 1), 1)
+
+
+def _skip_id3(f):
+    h = f.read(10)
+    if h[:3] == b'ID3' and len(h) == 10:
+        size = (h[6] << 21) | (h[7] << 14) | (h[8] << 7) | h[9]
+        off = 10 + size + (10 if h[5] & 0x10 else 0)
+    else:
+        off = 0
+    f.seek(off)
+    return off
+
+
+def _flac_duration(fp):
+    with open(fp, 'rb') as f:
+        _skip_id3(f)
+        if f.read(4) != b'fLaC':
+            return None
+        while True:
+            bh = f.read(4)
+            if len(bh) < 4:
+                return None
+            last, btype, blen = bh[0] & 0x80, bh[0] & 0x7F, int.from_bytes(bh[1:4], 'big')
+            if btype == 0:
+                si = f.read(blen)
+                rate = (si[10] << 12) | (si[11] << 4) | (si[12] >> 4)
+                total = ((si[13] & 0x0F) << 32) | int.from_bytes(si[14:18], 'big')
+                return total / float(rate) if rate and total else None
+            if last:
+                return None
+            f.seek(blen, 1)
+
+
+_MP3_BR = {
+    (3, 3): [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448],
+    (3, 2): [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384],
+    (3, 1): [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+    (2, 3): [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256],
+    (2, 2): [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+    (2, 1): [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+}
+_MP3_SR = {3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000]}
+
+
+def _mp3_duration(fp):
+    size = os.path.getsize(fp)
+    with open(fp, 'rb') as f:
+        off = _skip_id3(f)
+        buf = f.read(65536)
+        f.seek(max(0, size - 128))
+        tail = size - 128 if f.read(3) == b'TAG' else size
+    for i in range(len(buf) - 4):
+        if buf[i] != 0xFF or (buf[i + 1] & 0xE0) != 0xE0:
+            continue
+        b1, b2, b3 = buf[i + 1], buf[i + 2], buf[i + 3]
+        ver, layer = (b1 >> 3) & 3, (b1 >> 1) & 3
+        br_idx, sr_idx, mode = b2 >> 4, (b2 >> 2) & 3, b3 >> 6
+        if ver == 1 or layer == 0 or br_idx in (0, 15) or sr_idx == 3:
+            continue
+        sr = _MP3_SR[ver][sr_idx]
+        spf = 384 if layer == 3 else (1152 if (layer == 2 or ver == 3) else 576)
+        side = (32 if mode != 3 else 17) if ver == 3 else (17 if mode != 3 else 9)
+        x = i + 4 + side
+        if buf[x:x + 4] in (b'Xing', b'Info') and int.from_bytes(buf[x + 4:x + 8], 'big') & 1:
+            return int.from_bytes(buf[x + 8:x + 12], 'big') * spf / float(sr)
+        v = i + 4 + 32
+        if buf[v:v + 4] == b'VBRI':
+            return int.from_bytes(buf[v + 14:v + 18], 'big') * spf / float(sr)
+        bitrate = _MP3_BR[(3 if ver == 3 else 2, layer)][br_idx] * 1000
+        return (tail - off - i) * 8.0 / bitrate        # constant bitrate
+    return None
+
+
+def _mp4_duration(fp):
+    import struct as _st
+    end = os.path.getsize(fp)
+    with open(fp, 'rb') as f:
+        def find(box, start, stop):
+            pos = start
+            while pos + 8 <= stop:
+                f.seek(pos)
+                size, typ = _st.unpack('>I4s', f.read(8))
+                hdr = 8
+                if size == 1:
+                    size = _st.unpack('>Q', f.read(8))[0]
+                    hdr = 16
+                elif size == 0:
+                    size = stop - pos
+                if size < hdr:
+                    return None
+                if typ == box:
+                    return pos + hdr, pos + size
+                pos += size
+            return None
+        moov = find(b'moov', 0, end)
+        if not moov:
+            return None
+        mvhd = find(b'mvhd', moov[0], moov[1])
+        if not mvhd:
+            return None
+        f.seek(mvhd[0])
+        d = f.read(32)
+        if d[0] == 1:
+            scale, dur = _st.unpack('>IQ', d[20:32])
+        else:
+            scale, dur = _st.unpack('>II', d[12:20])
+        return dur / float(scale) if scale else None
+
+
+def _ogg_duration(fp):
+    size = os.path.getsize(fp)
+    with open(fp, 'rb') as f:
+        first = f.read(4096)
+        if first[:4] != b'OggS':
+            return None
+        p = 27 + first[26]
+        pkt = first[p:p + 80]
+        preskip = 0
+        if pkt[:7] == b'\x01vorbis':
+            rate = int.from_bytes(pkt[12:16], 'little')
+        elif pkt[:8] == b'OpusHead':
+            rate, preskip = 48000, int.from_bytes(pkt[10:12], 'little')
+        elif pkt[:5] == b'\x7fFLAC':
+            si = pkt[17:]
+            rate = (si[10] << 12) | (si[11] << 4) | (si[12] >> 4)
+        else:
+            return None
+        f.seek(max(0, size - 65536))
+        tail = f.read()
+    i = tail.rfind(b'OggS')
+    if i < 0 or not rate:
+        return None
+    granule = int.from_bytes(tail[i + 6:i + 14], 'little', signed=True)
+    return max(0, granule - preskip) / float(rate)
+
+
+def _ffprobe_duration(fp):
+    import shutil
+    import subprocess
+    exe = shutil.which('ffprobe') or next((p for p in ('/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe')
+                                            if os.path.exists(p)), None)
+    if not exe:
+        return None
+    try:
+        out = subprocess.run([exe, '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', fp],
+                             capture_output=True, text=True, timeout=10).stdout.strip()
+        return float(out) if out else None
+    except Exception:
+        return None
+
+
+def audio_duration_seconds(fp):
+    """Length in seconds of any audio file Earmark imports, from its header; ffprobe as a last resort."""
+    try:
+        st = os.stat(fp)
+    except OSError:
+        return None
+    key = (fp, st.st_mtime_ns, st.st_size)
+    if key in _DUR_CACHE:
+        return _DUR_CACHE[key]
+    ext = os.path.splitext(fp)[1].lower()
+    dur = None
+    try:
+        if ext in ('.wav', '.wave', '.bwf'):
+            lay = wav_layout(fp)
+            if lay and lay.get('rate'):
+                dur = lay['n_frames'] / float(lay['rate'])
+        elif ext in ('.aiff', '.aif', '.aifc'):
+            dur = _aiff_duration(fp)
+        elif ext == '.flac':
+            dur = _flac_duration(fp)
+        elif ext == '.mp3':
+            dur = _mp3_duration(fp)
+        elif ext in ('.m4a', '.mp4', '.m4b', '.mov', '.aac'):
+            dur = _mp4_duration(fp)
+        elif ext in ('.ogg', '.oga', '.opus'):
+            dur = _ogg_duration(fp)
+    except Exception:
+        dur = None
+    if dur is None or dur <= 0:
+        dur = _ffprobe_duration(fp)
+    _DUR_CACHE[key] = dur
+    return dur
+
+
+# ---- Built-in file information (not metadata fields; usable in queries and sorting) ----
+FILE_INFO_FIELDS = [
+    ('file:name', 'File name', 'text'), ('file:folder', 'Folder', 'text'), ('file:type', 'File type', 'text'),
+    ('file:duration', 'Length (s or m:ss)', 'number'), ('file:samplerate', 'Sample rate (Hz)', 'number'),
+    ('file:channels', 'Channels', 'number'), ('file:bits', 'Bit depth', 'number'), ('file:size', 'Size (MB)', 'number'),
+    ('file:recorded', 'Recorded (from the recorder)', 'date'), ('file:created', 'Created', 'date'),
+    ('file:modified', 'Modified', 'date'),
+]
+_FILE_INFO_CACHE = {}
+
+
+def _bwf_recorded(fp):
+    """OriginationDate/Time from a Broadcast WAV 'bext' chunk (written by most field recorders)."""
+    import struct as _st
+    try:
+        with open(fp, 'rb') as f:
+            h = f.read(12)
+            if h[:4] != b'RIFF' or h[8:12] != b'WAVE':
+                return None
+            for _ in range(64):
+                ch = f.read(8)
+                if len(ch) < 8:
+                    return None
+                cid, size = ch[:4], _st.unpack('<I', ch[4:])[0]
+                if cid == b'bext':
+                    d = f.read(min(size, 346))
+                    date = d[320:330].decode('ascii', 'ignore').replace(':', '-').replace('/', '-').strip('\x00 ')
+                    tm = d[330:338].decode('ascii', 'ignore').replace('-', ':').strip('\x00 ')
+                    if len(date) == 10 and date[:2] in ('19', '20'):
+                        return date + (' ' + tm[:5] if len(tm) >= 5 else '')
+                    return None
+                if cid == b'data':
+                    return None
+                f.seek(size + (size & 1), 1)
+    except Exception:
+        return None
+    return None
+
+
+def _audio_format(fp):
+    """(sample rate, channels, bits) from the header, ffprobe as a fallback."""
+    import struct as _st
+    ext = os.path.splitext(fp)[1].lower()
+    try:
+        if ext in ('.wav', '.wave', '.bwf'):
+            lay = wav_layout(fp)
+            if lay:
+                return lay.get('rate'), lay.get('channels'), lay.get('bits')
+        elif ext in ('.aiff', '.aif', '.aifc'):
+            with open(fp, 'rb') as f:
+                h = f.read(12)
+                while h[:4] == b'FORM':
+                    ch = f.read(8)
+                    if len(ch) < 8:
+                        break
+                    cid, size = ch[:4], _st.unpack('>I', ch[4:])[0]
+                    if cid == b'COMM':
+                        d = f.read(18)
+                        return int(round(_ext80(d[8:18]))), _st.unpack('>h', d[0:2])[0], _st.unpack('>h', d[6:8])[0]
+                    f.seek(size + (size & 1), 1)
+        elif ext == '.flac':
+            with open(fp, 'rb') as f:
+                _skip_id3(f)
+                if f.read(4) == b'fLaC':
+                    f.read(4)
+                    si = f.read(34)
+                    rate = (si[10] << 12) | (si[11] << 4) | (si[12] >> 4)
+                    return rate, ((si[12] >> 1) & 7) + 1, (((si[12] & 1) << 4) | (si[13] >> 4)) + 1
+    except Exception:
+        pass
+    import shutil
+    import subprocess
+    exe = shutil.which('ffprobe') or next((p for p in ('/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe')
+                                            if os.path.exists(p)), None)
+    if exe:
+        try:
+            out = subprocess.run([exe, '-v', 'error', '-select_streams', 'a:0', '-show_entries',
+                                  'stream=sample_rate,channels,bits_per_raw_sample,bits_per_sample', '-of', 'json', fp],
+                                 capture_output=True, text=True, timeout=10).stdout
+            st = (json.loads(out).get('streams') or [{}])[0]
+            bits = int(st.get('bits_per_raw_sample') or st.get('bits_per_sample') or 0) or None
+            return int(st.get('sample_rate') or 0) or None, st.get('channels'), bits
+        except Exception:
+            pass
+    return None, None, None
+
+
+def _file_info(fp):
+    try:
+        st = os.stat(fp)
+    except OSError:
+        return {}
+    key = (fp, st.st_mtime_ns, st.st_size)
+    if key in _FILE_INFO_CACHE:
+        return _FILE_INFO_CACHE[key]
+    fmt_t = lambda t: datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M')
+    rate, ch, bits = _audio_format(fp)
+    info = {'file:name': os.path.basename(fp), 'file:folder': os.path.dirname(fp),
+            'file:type': os.path.splitext(fp)[1].lstrip('.').upper(),
+            'file:duration': audio_duration_seconds(fp), 'file:samplerate': rate, 'file:channels': ch,
+            'file:bits': bits, 'file:size': round(st.st_size / 1e6, 3),
+            'file:created': fmt_t(getattr(st, 'st_birthtime', st.st_ctime)), 'file:modified': fmt_t(st.st_mtime),
+            'file:recorded': _bwf_recorded(fp)}
+    _FILE_INFO_CACHE[key] = info
+    return info
+
+
+def _info_number(v):
+    """Numbers as typed: '90', '1:30' (m:ss), '1:02:00'."""
+    v = str(v).strip()
+    if ':' in v:
+        t = 0.0
+        for part in v.split(':'):
+            t = t * 60 + float(part)
+        return t
+    return float(v)
+
+
+def _file_info_match(fp, key, op, q):
+    kind = dict((k, t) for k, _, t in FILE_INFO_FIELDS).get(key)
+    val = _file_info(fp).get(key) if fp else None
+    if val is None or kind is None:
+        return False
+    q = str(q).strip()
+    if kind == 'number':
+        try:
+            a, b = float(val), _info_number(q)
+        except ValueError:
+            return False
+        return {'=': abs(a - b) < 1e-6 or (key == 'file:duration' and abs(a - b) < 0.5),
+                '>': a > b, '<': a < b, 'contains': q in str(val)}.get(op, False)
+    if kind == 'date':                      # '2025', '2025-04', '2025-04-22' or with a time
+        q = q.replace('/', '-')
+        return {'=': val.startswith(q), '>': val > q and not val.startswith(q), '<': val < q,
+                'contains': q in val}.get(op, False)
+    v, ql = str(val).lower(), q.lower()
+    return {'=': v == ql, 'contains': ql in v, '>': v > ql, '<': v < ql}.get(op, False)
+
+
+@app.route('/api/fileinfo/fields')
+def file_info_fields():
+    return jsonify([{'id': k, 'name': n, 'kind': t} for k, n, t in FILE_INFO_FIELDS])
+
+
 @app.route('/api/files/durations')
 def files_durations():
-    """Return {file_id: duration_seconds_or_null} for every file. Reads only the
-    WAV/AIFF header (cheap — no audio decode). Non-WAV formats return null."""
-    import wave
+    """Return {file_id: duration_seconds_or_null} for every file. Reads only each file's
+    header (WAV, AIFF, FLAC, MP3, M4A, OGG), cached; ffprobe as a last resort."""
     out = {}
     for f in db.get_files():
         fp = f.get('filepath')
-        dur = None
-        try:
-            if fp and os.path.exists(fp) and os.path.splitext(fp)[1].lower() in ('.wav', '.wave', '.aiff', '.aif'):
-                with wave.open(fp, 'rb') as wf:
-                    rate = wf.getframerate()
-                    if rate:
-                        dur = wf.getnframes() / rate
-        except Exception:
-            dur = None
+        dur = audio_duration_seconds(fp) if fp else None
         out[str(f['id'])] = dur
     return jsonify(out)
 
@@ -9409,9 +11367,14 @@ def query_files():
             matches = True
             
             for condition in conditions:
-                field_id = int(condition['field_id'])
                 operator = condition['operator']
                 query_value = condition['value']
+                if str(condition['field_id']).startswith('file:'):          # built-in file information
+                    if not _file_info_match(file_detail.get('filepath'), condition['field_id'], operator, query_value):
+                        matches = False
+                        break
+                    continue
+                field_id = int(condition['field_id'])
                 
                 # Get field info
                 field = next((f for f in db.get_fields() if f['id'] == field_id), None)
@@ -9481,6 +11444,13 @@ def query_files():
         files = [db.get_file(f['id']) for f in files]
     
     # Sort files
+    if sort_by and str(sort_by).startswith('file:'):
+        def info_key(f):
+            v = _file_info(f.get('filepath') or '').get(sort_by)
+            return (v is None, v if isinstance(v, (int, float)) else str(v or '').lower())
+        files.sort(key=info_key, reverse=(sort_order == 'desc'))
+        sort_by = ''
+        return jsonify({'files': files, 'count': len(files)})
     if sort_by:
         field = next((f for f in db.get_fields() if f['id'] == int(sort_by)), None)
         if field:
@@ -9573,6 +11543,750 @@ def backup_interval_route():
         backup_interval_minutes = minutes
         return jsonify({'success': True, 'minutes': backup_interval_minutes})
     return jsonify({'minutes': backup_interval_minutes, 'running': backup_thread_started})
+
+
+# ---------------------------------------------------------------------------
+# Detection plugins. Earmark plugin contract v1 (see plugins/README.txt).
+# Plugins live in <app folder>/plugins/<id>/ with a plugin.json manifest; Earmark
+# never imports them, it runs them in their own Python environment and reads JSON.
+# Markers they create carry source=<plugin id> plus det_label/det_start/det_end/
+# det_score/det_weak (what the model proposed); older clap_* fields are still read.
+# Analyses and per-lane score curves live in ~/Documents/Earmark/cache/<file key>/.
+# ---------------------------------------------------------------------------
+PLUGINS_DIRS = [os.path.join(DATA_DIR, 'plugins')]          # ~/Documents/Earmark/plugins (also for the built app)
+if not getattr(sys, 'frozen', False):                        # running from source: <earmark folder>/plugins first
+    PLUGINS_DIRS.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'plugins'))
+DET_CACHE_DIR = os.path.join(DATA_DIR, 'cache')
+PLUGIN_CONTRACT = 1
+CLAP_PALETTE = ['Red', 'Blue', 'Green', 'Purple', 'Yellow', 'Pink', 'Cyan', 'Orange', 'Teal', 'Brown',
+                'Navy', 'Magenta', 'Lime', 'Olive', 'Coral', 'Sky', 'Sand', 'Grey', 'Black']
+_clap_jobs = {}
+_clap_lock = threading.Lock()
+
+
+# ---------------- plugins
+def _plugins():
+    """Scan the plugin folders. Returns {id: manifest + dir, python_path, available, problem}."""
+    out = {}
+    found = []
+    for base in PLUGINS_DIRS:
+        if os.path.isdir(base):
+            found += [os.path.join(base, n) for n in sorted(os.listdir(base))]
+    for d in found:
+        name = os.path.basename(d)
+        mf = os.path.join(d, 'plugin.json')
+        if not os.path.isfile(mf):
+            continue
+        try:
+            with open(mf) as fh:
+                m = json.load(fh)
+        except Exception as e:
+            print('[plugins] %s: bad plugin.json (%s)' % (name, e))
+            continue
+        pid = m.get('id') or name
+        if pid in out:                       # the same plugin in two places: the first one wins
+            continue
+        m['id'] = pid
+        m['dir'] = d
+        problem = None
+        if int(m.get('contract', 0)) > PLUGIN_CONTRACT:
+            problem = 'needs a newer Earmark (plugin contract %s)' % m.get('contract')
+        py = m.get('python') or ''
+        py = sys.executable if py == '{earmark_python}' else os.path.expanduser(py)
+        if py and not os.path.isabs(py):
+            py = os.path.join(d, py)
+        if os.name == 'nt' and py and not os.path.exists(py) and os.path.basename(os.path.dirname(py)) == 'bin':
+            py = os.path.join(os.path.dirname(os.path.dirname(py)), 'Scripts', 'python.exe')   # Windows venv layout
+        m['python_path'] = py
+        if not problem and not (py and os.path.exists(py)):
+            problem = 'not installed (run install.sh or install.bat in %s)' % d
+        m['available'] = problem is None
+        m['problem'] = problem
+        out[pid] = m
+    return out
+
+
+def _plugin(pid):
+    p = _plugins().get(pid)
+    if not p:
+        raise RuntimeError('unknown plugin: %s' % pid)
+    if not p['available']:
+        raise RuntimeError('%s: %s' % (p.get('name', pid), p['problem']))
+    return p
+
+
+def _plugin_cmd(p, key):
+    cmd = [x.replace('{python}', p['python_path']).replace('{plugin_dir}', p['dir']) for x in p[key]]
+    if getattr(sys, 'frozen', False) and p.get('python') == '{earmark_python}':
+        rest = [x for x in cmd[1:] if x != '-u']                # built app: Earmark runs the script itself
+        if rest:
+            cmd = [sys.executable, '--run-plugin-script', os.path.join(p['dir'], rest[0])] + rest[1:]
+    return cmd
+
+
+@app.route('/api/plugins')
+def plugins_list():
+    keep = ('id', 'name', 'version', 'description', 'license', 'query', 'windows', 'score', 'options', 'similar',
+            'available', 'problem')
+    out = []
+    for p in _plugins().values():
+        e = dict((k, p.get(k)) for k in keep)
+        e['live'] = bool(p.get('server'))
+        out.append(e)
+    return jsonify(out)
+
+
+# ---------------- small helpers
+def _clap_hms(sec):
+    ms = int(round(max(float(sec), 0.0) * 1000))
+    h, ms = divmod(ms, 3600000)
+    m, ms = divmod(ms, 60000)
+    s_, ms = divmod(ms, 1000)
+    return '%02d:%02d:%02d.%03d' % (h, m, s_, ms)
+
+
+def _clap_sec(hms):
+    try:
+        h, m, s_ = hms.split(':')
+        return int(h) * 3600 + int(m) * 60 + float(s_)
+    except Exception:
+        return 0.0
+
+
+def _clap_read_markers(target_db, file_id, field_id):
+    conn = sqlite3.connect(target_db.db_path)
+    c = conn.cursor()
+    c.execute('SELECT value FROM field_values WHERE file_id = ? AND field_id = ?', (file_id, field_id))
+    row = c.fetchone()
+    conn.close()
+    try:
+        return json.loads(row[0]) if row and row[0] else []
+    except Exception:
+        return []
+
+
+def _det(m, k):
+    """A detection field: det_<k>, or the older clap_<k>."""
+    return m.get('det_' + k, m.get('clap_' + k))
+
+
+def _is_det(m):
+    return bool(m.get('source')) and ('det_label' in m or 'clap_label' in m)
+
+
+def _clap_key(engine, label):
+    return engine + ':' + label
+
+
+def _clap_mkey(m):
+    return (m.get('source') or 'clap') + ':' + (_det(m, 'label') or m.get('label', '')).rstrip('?')
+
+
+def _clap_untouched(m):
+    return (m.get('start') == _det(m, 'start') and m.get('end') == _det(m, 'end')
+            and m.get('label') == _det(m, 'label'))
+
+
+# ---------------- central cache
+def _det_file_dir(audio_path, create=True):
+    """~/Documents/Earmark/cache/<readable stem>-<hash of path+size+mtime>/"""
+    import hashlib
+    import re as _re
+    try:
+        st = os.stat(audio_path)
+        sig = '%s|%d|%d' % (os.path.abspath(audio_path), st.st_size, int(st.st_mtime))
+    except OSError:
+        sig = os.path.abspath(audio_path)
+    stem = _re.sub(r'[^A-Za-z0-9._-]+', '_', os.path.splitext(os.path.basename(audio_path))[0])[:40]
+    d = os.path.join(DET_CACHE_DIR, '%s-%s' % (stem, hashlib.sha1(sig.encode('utf-8')).hexdigest()[:12]))
+    if create:
+        os.makedirs(d, exist_ok=True)
+    return d
+
+
+def _clap_sidecar(audio_path, field_id, create=True):
+    """Per-lane score curves and colours. Moved here from <recording>_clap/; old files are migrated."""
+    d = os.path.join(_det_file_dir(audio_path, create), 'lanes')
+    if create:
+        os.makedirs(d, exist_ok=True)
+    path = os.path.join(d, '%d.json' % int(field_id))
+    if not os.path.exists(path):
+        stem = os.path.splitext(os.path.basename(audio_path))[0]
+        legacy = os.path.join(os.path.dirname(audio_path), stem + '_clap', 'earmark_lane_%d.json' % int(field_id))
+        if os.path.exists(legacy):
+            try:
+                os.makedirs(d, exist_ok=True)
+                _clap_side_save(path, _clap_side_load(legacy))
+            except Exception as e:
+                print('[plugins] could not migrate %s: %s' % (legacy, e))
+    return path
+
+
+def _clap_entries(scores, engine, duration):
+    params = dict((k, scores.get(k)) for k in ('win', 'hop', 'gap', 'min_dur', 'offset', 'span'))
+    t0 = float(scores.get('t0') or 0.0)
+    t_end = float(scores.get('t_end') or duration or 0.0)
+    out = []
+    for l in scores.get('labels', []):
+        e = {'key': _clap_key(engine, l['label']), 'label': l['label'], 'engine': engine,
+             'open': l['open'], 'values': l['values'], 't0': t0, 't_end': t_end}
+        e.update(params)
+        out.append(e)
+    return out
+
+
+def _clap_side_load(path):
+    """Lane file: {'duration', 'colors': {key: colour}, 'labels': [score entries]}."""
+    if not os.path.exists(path):
+        return {'duration': None, 'colors': {}, 'labels': []}
+    with open(path) as fh:
+        data = json.load(fh)
+    if 'scores' in data:                    # first-version format (one CLAP run per lane)
+        cols = dict((_clap_key('clap', k), v) for k, v in (data.get('colors') or {}).items())
+        return {'duration': data.get('duration'), 'colors': cols,
+                'labels': _clap_entries(data['scores'], 'clap', data.get('duration'))}
+    data.setdefault('colors', {})
+    data.setdefault('labels', [])
+    return data
+
+
+def _clap_side_save(path, side):
+    with open(path, 'w') as fh:
+        json.dump(side, fh)
+
+
+# ---------------- markers
+def _clap_assign_colors(markers, side, engine, labels_req, names):
+    """A colour per label of this run: the #colour asked for, else the colour this label already has
+    on the lane, else a palette colour no other detected label on the lane is using."""
+    known = dict(side.get('colors') or {})
+    for m in markers:
+        if _is_det(m) and m.get('color'):
+            known.setdefault(_clap_mkey(m), m['color'])
+    used = set(known.values())
+    requested = dict((l.get('label'), l.get('color')) for l in labels_req
+                     if l.get('color') in CLAP_PALETTE or (l.get('color') or '').startswith('#'))
+    out = {}
+    for name in names:
+        k = _clap_key(engine, name)
+        if name in requested:
+            c = requested[name]
+        elif k in known:
+            c = known[k]
+        else:
+            free = [x for x in CLAP_PALETTE if x not in used]
+            if free:
+                c = free[0]
+            else:
+                counts = dict((x, 0) for x in CLAP_PALETTE)
+                for v in list(known.values()) + list(out.values()):
+                    if v in counts:
+                        counts[v] += 1
+                c = min(CLAP_PALETTE, key=lambda x: counts[x])
+        out[k] = c
+        used.add(c)
+    return out
+
+
+def _clap_apply_events(markers, engine, events, colors, t0, t_end, only_label=None):
+    """Drop this plugin's untouched markers for the labels in events (or only_label) within [t0, t_end],
+    then add the new events, skipping places where the user already edited a marker of that label."""
+    labels = set([only_label]) if only_label is not None else set(ev['label'] for ev in events)
+    keys = set(_clap_key(engine, l) for l in labels)
+
+    def in_range(m):
+        return _clap_sec(m.get('start', '0:0:0')) < t_end and _clap_sec(m.get('end', '0:0:0')) > t0
+
+    keep = [m for m in markers if not (_is_det(m) and _clap_mkey(m) in keys and _clap_untouched(m) and in_range(m))]
+    edited = {}
+    for m in keep:
+        k = _clap_mkey(m)
+        if _is_det(m) and k in keys:
+            edited.setdefault(k, []).append((_clap_sec(m['start']), _clap_sec(m['end'])))
+    added = weak = 0
+    for ev in events:
+        k = _clap_key(engine, ev['label'])
+        a, b = float(ev['start']), float(ev['end'])
+        if any(a < y and b > x for x, y in edited.get(k, [])):
+            continue
+        is_weak = bool(ev.get('weak'))
+        label = ev['label'] + ('?' if is_weak else '')
+        start, end = _clap_hms(a), _clap_hms(b)
+        keep.append({'start': start, 'end': end, 'label': label, 'color': colors.get(k, 'Cyan'),
+                     'source': engine, 'det_label': label, 'det_start': start, 'det_end': end,
+                     'det_score': ev.get('score'), 'det_weak': is_weak})
+        added += 1
+        weak += 1 if is_weak else 0
+    return keep, added, weak
+
+
+# ---------------- batch runs
+def _clap_worker(job_id, target_db, file_id, field_id, audio_path, words, win, engine, start, end, opts):
+    import subprocess
+    import tempfile
+    import re
+    job = _clap_jobs[job_id]
+    out_json = os.path.join(tempfile.gettempdir(), 'earmark_det_%s.json' % job_id)
+    buf = ''
+    try:
+        p = _plugin(engine)
+        w = p.get('windows') or {}
+        hop = win * float(w.get('hop_ratio', 0.5)) if 'hop_ratio' in w or 'hop_default' not in w else float(w['hop_default'])
+        cmd = _plugin_cmd(p, 'run') + ['--audio', audio_path, '--json', out_json, '--query', words or '',
+                                       '--win', str(win), '--hop', str(hop),
+                                       '--cache', os.path.join(_det_file_dir(audio_path), engine)]
+        if start is not None and end is not None:
+            cmd += ['--start', '%.3f' % start, '--end', '%.3f' % end]
+        for k, v in (opts or {}).items():
+            if v is not None and v != '':
+                cmd += ['--opt', '%s=%s' % (k, v)]
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=p['dir'])
+        job['proc'] = proc
+        while True:
+            chunk = os.read(proc.stdout.fileno(), 512)
+            if not chunk:
+                break
+            buf = (buf + chunk.decode('utf-8', 'replace'))[-6000:]
+            prog = re.findall(r'PROGRESS (\d+) (\d+)([^\r\n]*)', buf)
+            stat = re.findall(r'STATUS ([^\r\n]+)', buf)
+            if prog:
+                d_, t_, extra = prog[-1]
+                job['message'] = 'Analysing windows %s/%s%s' % (d_, t_, (' (' + extra.strip() + ')') if extra.strip() else '...')
+            elif 'cached' in buf:
+                job['message'] = 'Using saved analysis...'
+            elif stat:
+                job['message'] = stat[-1]
+        proc.wait()
+        print('[plugins] %s: %s' % (engine, buf[-1500:]))
+        if proc.returncode != 0 or not os.path.exists(out_json):
+            lines = [l for l in buf.strip().splitlines() if l.strip()]
+            errs = [l[6:] for l in lines if l.startswith('ERROR ')]
+            job['state'] = 'error'
+            job['message'] = '%s failed: %s' % (p.get('name', engine), errs[-1] if errs else '\n'.join(lines[-3:]))
+            return
+        with open(out_json) as f:
+            data = json.load(f)
+        os.remove(out_json)
+        events = data.get('events', [])
+        names = [l['label'] for l in data.get('labels', [])]
+        for ev in events:
+            if ev['label'] not in names:
+                names.append(ev['label'])
+        sc = data.get('scores') or {}
+        t0 = float(sc.get('t0') or 0.0)
+        t_end = float(sc.get('t_end') or data.get('duration') or 0.0)
+        side_path = _clap_sidecar(audio_path, field_id)
+        side = _clap_side_load(side_path)
+        markers = _clap_read_markers(target_db, file_id, field_id)
+        colors = _clap_assign_colors(markers, side, engine, data.get('labels', []), names)
+        markers, added, weak = _clap_apply_events(markers, engine, events, colors, t0, t_end)
+        target_db.set_value(file_id, field_id, json.dumps(markers))
+        if sc.get('labels'):
+            new = _clap_entries(sc, engine, data.get('duration'))
+            new_keys = set(e['key'] for e in new)
+            side['labels'] = [e for e in side['labels'] if e['key'] not in new_keys] + new
+            side['colors'].update(colors)
+            side['duration'] = data.get('duration')
+            try:
+                _clap_side_save(side_path, side)
+            except Exception as e:
+                print('[plugins] could not save scores: %s' % e)
+        job['state'] = 'done'
+        job['message'] = 'Done: %d marker(s), %d weak%s, in %.0fs.' % (
+            added, weak, ' (selection only)' if start is not None else '', time.time() - job['t0'])
+    except Exception as e:
+        job['state'] = 'error'
+        job['message'] = 'Plugin error: %s' % e
+
+
+@app.route('/api/clapmark/run', methods=['POST'])
+def clapmark_run():
+    d = request.json or {}
+    try:
+        file_id = int(d.get('file_id'))
+        field_id = int(d.get('field_id'))
+        win = float(d.get('win') or 1.0)
+        start = float(d['start']) if d.get('start') is not None else None
+        end = float(d['end']) if d.get('end') is not None else None
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'bad request'})
+    engine = d.get('engine') or 'clap'
+    try:
+        p = _plugin(engine)
+    except RuntimeError as e:
+        return jsonify({'ok': False, 'error': str(e)})
+    words = (d.get('words') or '').strip()
+    q = p.get('query') or {}
+    if not words and q.get('kind', 'text') != 'none' and not q.get('discover'):
+        return jsonify({'ok': False, 'error': 'nothing to look for'})
+    f = db.get_file(file_id)
+    if not f or not os.path.exists(f['filepath']):
+        return jsonify({'ok': False, 'error': 'audio file not found'})
+    field = next((x for x in db.get_fields() if x['id'] == field_id), None)
+    if not field or field['type'] != 'markers':
+        return jsonify({'ok': False, 'error': 'not a markers field'})
+    if _clap_helper_busy():
+        return jsonify({'ok': False, 'error': 'a live helper is analysing a file; wait for it to finish'})
+    with _clap_lock:
+        for j in _clap_jobs.values():
+            if j['state'] == 'running':
+                return jsonify({'ok': False, 'error': 'another Run is in progress; wait for it to finish'})
+        job_id = '%x' % int(time.time() * 1000)
+        _clap_jobs[job_id] = {'state': 'running', 'message': 'Starting %s...' % p.get('name', engine),
+                              'file_id': file_id, 'field_id': field_id, 't0': time.time()}
+    threading.Thread(target=_clap_worker,
+                     args=(job_id, db, file_id, field_id, f['filepath'], words, win, engine, start, end,
+                           d.get('opts') or {}),
+                     daemon=True).start()
+    return jsonify({'ok': True, 'job': job_id})
+
+
+@app.route('/api/clapmark/similar', methods=['POST'])
+def clapmark_similar():
+    """'Find similar' with one plugin: examples = [[start, end], ...] (seconds). Returns a score curve."""
+    import subprocess
+    import tempfile
+    d = request.json or {}
+    try:
+        f = db.get_file(int(d.get('file_id')))
+        pid = d.get('plugin')
+        p = _plugin(pid)
+        examples = [[float(a), float(b)] for a, b in (d.get('examples') or []) if float(b) > float(a)]
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+    if not f or not os.path.exists(f['filepath']):
+        return jsonify({'ok': False, 'error': 'audio file not found'})
+    if not examples:
+        return jsonify({'ok': False, 'error': 'select one or more markers, or a range, as examples'})
+    sim = p.get('similar') or {}
+    label = (d.get('label') or 'similar').strip() or 'similar'
+    cache = os.path.join(_det_file_dir(f['filepath']), pid)
+    try:
+        if sim.get('method') == 'live':
+            win = float(d.get('win') or (p.get('windows') or {}).get('default') or 1.0)
+            w = p.get('windows') or {}
+            hop = win * float(w.get('hop_ratio', 0.5))
+            r = _det_srv_call(pid, '/similar', {'path': f['filepath'], 'win': win, 'hop': hop, 'cache': cache,
+                                                'examples': examples}, timeout=60)
+            if not r.get('ok'):
+                return jsonify(r)
+            out = {'values': r['values'], 'win': r['win'], 'hop': r['hop'], 't0': 0.0,
+                   't_end': r['duration'], 'duration': r['duration'], 'gap': 0.5, 'min_dur': 0.5}
+        elif sim.get('method') == 'batch':
+            out_json = os.path.join(tempfile.gettempdir(), 'earmark_sim_%x.json' % int(time.time() * 1000))
+            cmd = _plugin_cmd(p, 'run') + ['--audio', f['filepath'], '--json', out_json, '--query', label,
+                                           '--cache', cache]
+            for a, b in examples:
+                cmd += ['--example', '%.3f:%.3f' % (a, b)]
+            r = subprocess.run(cmd, cwd=p['dir'], capture_output=True, text=True, timeout=300)
+            if r.returncode != 0 or not os.path.exists(out_json):
+                lines = [l for l in (r.stdout + r.stderr).splitlines() if l.strip()]
+                errs = [l[6:] for l in lines if l.startswith('ERROR ')]
+                return jsonify({'ok': False, 'error': errs[-1] if errs else ' | '.join(lines[-2:])})
+            with open(out_json) as fh:
+                data = json.load(fh)
+            os.remove(out_json)
+            sc = data['scores']
+            out = {'values': sc['labels'][0]['values'], 'win': sc['win'], 'hop': sc['hop'],
+                   't0': sc.get('t0', 0.0), 't_end': sc.get('t_end', data['duration']), 'duration': data['duration'],
+                   'gap': sc.get('gap', 0.0), 'min_dur': sc.get('min_dur', 0.0), 'span': sc.get('span')}
+        else:
+            return jsonify({'ok': False, 'error': '%s cannot find similar sounds' % p.get('name', pid)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+    out.update({'ok': True, 'plugin': pid, 'name': p.get('name', pid), 'label': label,
+                'default_threshold': sim.get('default_threshold')})
+    return jsonify(out)
+
+
+@app.route('/api/clapmark/scores')
+def clapmark_scores():
+    try:
+        file_id = int(request.args.get('file_id'))
+        field_id = int(request.args.get('field_id'))
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'bad request'})
+    f = db.get_file(file_id)
+    if not f:
+        return jsonify({'ok': False, 'error': 'no such file'})
+    side = _clap_side_load(_clap_sidecar(f['filepath'], field_id, create=False))
+    if not side.get('labels'):
+        return jsonify({'ok': False, 'error': 'no scores yet'})
+    return jsonify({'ok': True, 'data': side})
+
+
+@app.route('/api/clapmark/replace', methods=['POST'])
+def clapmark_replace():
+    """Replace one label's untouched markers (within the range it was analysed) after a threshold drag.
+    Markers the user moved, resized or relabelled, and the user's own markers, are kept."""
+    d = request.json or {}
+    try:
+        file_id = int(d.get('file_id'))
+        field_id = int(d.get('field_id'))
+        key = d['key']
+        open_t = float(d.get('open'))
+        events = d.get('events') or []
+    except (TypeError, ValueError, KeyError):
+        return jsonify({'ok': False, 'error': 'bad request'})
+    f = db.get_file(file_id)
+    if not f:
+        return jsonify({'ok': False, 'error': 'no such file'})
+    side_path = _clap_sidecar(f['filepath'], field_id)
+    side = _clap_side_load(side_path)
+    entry = next((e for e in side['labels'] if e['key'] == key), None)
+    if not entry:
+        return jsonify({'ok': False, 'error': 'no scores for ' + key})
+    engine, label = entry['engine'], entry['label']
+    for ev in events:
+        ev['label'] = label
+    colors = {key: side['colors'].get(key, 'Cyan')}
+    markers = _clap_read_markers(db, file_id, field_id)
+    markers, added, _ = _clap_apply_events(markers, engine, events, colors,
+                                           float(entry.get('t0') or 0), float(entry.get('t_end') or 1e12),
+                                           only_label=label)
+    for m in markers:
+        if m.get('source') == engine and _clap_mkey(m) == key and 'det_open' not in m and _clap_untouched(m):
+            m['det_open'] = open_t
+    db.set_value(file_id, field_id, json.dumps(markers))
+    entry['open'] = open_t
+    _clap_side_save(side_path, side)
+    return jsonify({'ok': True, 'added': added})
+
+
+# ---------------- live helpers (one per plugin that has a "server")
+_det_srv = {}                     # plugin id -> {'proc', 'port'}
+_det_srv_lock = threading.Lock()
+
+
+def _det_server_port(pid):
+    """Start a plugin's live helper once (it loads its model) and return its port."""
+    import subprocess
+    import atexit
+    with _det_srv_lock:
+        s = _det_srv.get(pid) or {}
+        p = s.get('proc')
+        if p is not None and p.poll() is None and s.get('port'):
+            return s['port']
+        plug = _plugin(pid)
+        if not plug.get('server'):
+            raise RuntimeError('%s has no live mode' % plug.get('name', pid))
+        p = subprocess.Popen(_plugin_cmd(plug, 'server'), stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, cwd=plug['dir'])
+        _det_srv[pid] = {'proc': p, 'port': None}
+        atexit.register(lambda: p.poll() is None and p.kill())
+        lines = []
+        port = None
+        while port is None:
+            line = p.stdout.readline()
+            if not line:
+                raise RuntimeError('%s helper did not start: %s' % (plug.get('name', pid), ' | '.join(lines[-3:])))
+            line = line.decode('utf-8', 'replace').strip()
+            if line.startswith('READY '):
+                port = int(line.split()[1])
+            elif line:
+                lines.append(line)
+
+        def drain():
+            for _ in iter(p.stdout.readline, b''):
+                pass
+        threading.Thread(target=drain, daemon=True).start()
+        _det_srv[pid]['port'] = port
+        return port
+
+
+def _clap_helper_busy():
+    """True if any running live helper is analysing (never starts one)."""
+    for pid, s in list(_det_srv.items()):
+        p = s.get('proc')
+        if p is None or p.poll() is not None or not s.get('port'):
+            continue
+        try:
+            if _det_srv_call(pid, '/busy', timeout=2).get('busy'):
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def _det_srv_call(pid, path, payload=None, timeout=120):
+    import urllib.request
+    url = 'http://127.0.0.1:%d%s' % (_det_server_port(pid), path)
+    if payload is None:
+        req = urllib.request.Request(url)
+    else:
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'),
+                                     headers={'Content-Type': 'application/json'})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode('utf-8'))
+
+
+def _clap_live_args():
+    d = request.json or {}
+    f = db.get_file(int(d.get('file_id')))
+    if not f or not os.path.exists(f['filepath']):
+        raise RuntimeError('audio file not found')
+    pid = d.get('plugin') or 'clap'
+    p = _plugin(pid)
+    win = float(d.get('win') or 1.0)
+    w = p.get('windows') or {}
+    hop = win * float(w.get('hop_ratio', 0.5)) if 'hop_ratio' in w or 'hop_default' not in w else float(w['hop_default'])
+    base = {'path': f['filepath'], 'win': win, 'hop': hop,
+            'cache': os.path.join(_det_file_dir(f['filepath']), pid), 'options': d.get('opts') or {}}
+    return d, pid, base
+
+
+@app.route('/api/clapmark/live/prepare', methods=['POST'])
+def clapmark_live_prepare():
+    try:
+        d, pid, base = _clap_live_args()
+        if d.get('analyse') and any(j['state'] == 'running' for j in _clap_jobs.values()):
+            return jsonify({'ok': False, 'error': 'a Run is still in progress; wait for it to finish'})
+        base['analyse'] = bool(d.get('analyse'))
+        return jsonify(_det_srv_call(pid, '/prepare', base, timeout=180))
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+
+@app.route('/api/clapmark/live/status/<job>')
+def clapmark_live_status(job):
+    try:
+        return jsonify(_det_srv_call(request.args.get('plugin') or 'clap', '/status?job=' + job))
+    except Exception as e:
+        return jsonify({'state': 'error', 'message': str(e)})
+
+
+@app.route('/api/clapmark/live/score', methods=['POST'])
+def clapmark_live_score():
+    try:
+        d, pid, base = _clap_live_args()
+        base['queries'] = d.get('phrases') or d.get('queries') or []
+        return jsonify(_det_srv_call(pid, '/score', base))
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+
+@app.route('/api/clapmark/commit', methods=['POST'])
+def clapmark_commit():
+    """Turn a live candidate into markers named by its label (and keep its curve for the strip)."""
+    d = request.json or {}
+    try:
+        file_id = int(d.get('file_id'))
+        field_id = int(d.get('field_id'))
+        label = (d.get('label') or '').strip()
+        open_t = float(d.get('open'))
+        entry = d['entry']
+        events = d.get('events') or []
+    except (TypeError, ValueError, KeyError):
+        return jsonify({'ok': False, 'error': 'bad request'})
+    engine = d.get('engine') or 'clap'
+    if not label:
+        return jsonify({'ok': False, 'error': 'no label'})
+    f = db.get_file(file_id)
+    if not f:
+        return jsonify({'ok': False, 'error': 'no such file'})
+    side_path = _clap_sidecar(f['filepath'], field_id)
+    side = _clap_side_load(side_path)
+    markers = _clap_read_markers(db, file_id, field_id)
+    colors = _clap_assign_colors(markers, side, engine, [], [label])
+    for ev in events:
+        ev['label'] = label
+    t0, t_end = float(entry.get('t0') or 0), float(entry.get('t_end') or 1e12)
+    markers, added, _ = _clap_apply_events(markers, engine, events, colors, t0, t_end, only_label=label)
+    db.set_value(file_id, field_id, json.dumps(markers))
+    key = _clap_key(engine, label)
+    new = {'key': key, 'label': label, 'engine': engine, 'open': open_t, 'phrase': d.get('phrase'),
+           'values': entry['values'], 't0': t0, 't_end': t_end}
+    for k in ('win', 'hop', 'gap', 'min_dur', 'offset', 'span'):
+        new[k] = entry.get(k)
+    side['labels'] = [e for e in side['labels'] if e['key'] != key] + [new]
+    side['colors'].update(colors)
+    side['duration'] = side.get('duration') or d.get('duration')
+    _clap_side_save(side_path, side)
+    return jsonify({'ok': True, 'added': added, 'color': colors[key]})
+
+
+@app.route('/api/clapmark/rename', methods=['POST'])
+def clapmark_rename():
+    """Rename every marker of one class on a lane (weak '?' candidates included), and its curve."""
+    d = request.json or {}
+    try:
+        file_id = int(d.get('file_id'))
+        field_id = int(d.get('field_id'))
+        old = (d.get('old') or '').strip()
+        new = (d.get('new') or '').strip()
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'bad request'})
+    if not old or not new or old == new:
+        return jsonify({'ok': False, 'error': 'give an old and a different new name'})
+
+    def swap(name):
+        if name is None:
+            return None, False
+        weak = name.endswith('?')
+        base = name[:-1] if weak else name
+        return (new + ('?' if weak else ''), True) if base == old else (name, False)
+
+    markers = _clap_read_markers(db, file_id, field_id)
+    n = 0
+    for m in markers:
+        m['label'], changed = swap(m.get('label'))
+        for k in ('det_label', 'clap_label'):
+            if k in m:
+                m[k], _ = swap(m.get(k))
+        n += 1 if changed else 0
+    db.set_value(file_id, field_id, json.dumps(markers))
+    f = db.get_file(file_id)
+    if f:
+        side_path = _clap_sidecar(f['filepath'], field_id, create=False)
+        if os.path.exists(side_path):
+            side = _clap_side_load(side_path)
+            renamed = []
+            for e in side['labels']:
+                if e['label'] == old:
+                    new_key = _clap_key(e['engine'], new)
+                    if e['key'] in side['colors'] and new_key not in side['colors']:
+                        side['colors'][new_key] = side['colors'].pop(e['key'])
+                    e['label'], e['key'] = new, new_key
+                    renamed.append(new_key)
+            seen, uniq = set(), []
+            for e in reversed(side['labels']):
+                if e['key'] not in seen:
+                    seen.add(e['key'])
+                    uniq.append(e)
+            side['labels'] = list(reversed(uniq))
+            _clap_side_save(side_path, side)
+    return jsonify({'ok': True, 'renamed': n})
+
+
+@app.route('/api/clapmark/status/<job_id>')
+def clapmark_status(job_id):
+    j = _clap_jobs.get(job_id)
+    if not j:
+        return jsonify({'state': 'error', 'message': 'unknown job'})
+    return jsonify({'state': j['state'], 'message': j['message']})
+
+
+@app.route('/api/clapmark/clear', methods=['POST'])
+def clapmark_clear():
+    d = request.json or {}
+    try:
+        file_id = int(d.get('file_id'))
+        field_id = int(d.get('field_id'))
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'bad request'})
+    markers = _clap_read_markers(db, file_id, field_id)
+    keep = [m for m in markers if not _is_det(m)]
+    db.set_value(file_id, field_id, json.dumps(keep))
+    f = db.get_file(file_id)
+    if f:
+        side = _clap_sidecar(f['filepath'], field_id, create=False)
+        if os.path.exists(side):
+            os.remove(side)
+        stem = os.path.splitext(os.path.basename(f['filepath']))[0]
+        legacy = os.path.join(os.path.dirname(f['filepath']), stem + '_clap', 'earmark_lane_%d.json' % field_id)
+        if os.path.exists(legacy):
+            os.remove(legacy)
+    return jsonify({'ok': True, 'removed': len(markers) - len(keep)})
 
 
 if __name__ == '__main__':

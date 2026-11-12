@@ -1,0 +1,1 @@
+MIT License, same as Earmark. No model is used.

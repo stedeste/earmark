@@ -1,0 +1,14 @@
+{
+  "contract": 1,
+  "id": "fingerprint",
+  "name": "Fingerprint",
+  "version": "1.0",
+  "description": "Finds near-identical repeats of a sound (same call, bell, engine) by its acoustic shape. No AI model.",
+  "license": "MIT (no model).",
+  "python": "{earmark_python}",
+  "run": ["{python}", "-u", "run.py"],
+  "query": { "kind": "example" },
+  "similar": { "method": "batch", "default_threshold": 0.5 },
+  "score": { "kind": "similarity", "default_threshold": 0.5 },
+  "options": []
+}
